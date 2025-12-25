@@ -2,6 +2,8 @@
 
 A command-line task management application built with Go, implementing clean architecture principles and layered design patterns.
 
+sample solution task-tracker challenge from https://roadmap.sh/projects/task-tracker
+
 ## Features
 
 - Create new tasks
@@ -25,8 +27,8 @@ A command-line task management application built with Go, implementing clean arc
 
 
 
-sample solution task-tracker challenge from https://roadmap.sh/projects/task-tracker
 ```
+
 backend-task-cli/
 ├── cmd/
 │   └── main.go              # Application entry point
