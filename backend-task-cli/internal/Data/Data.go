@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// informasi status progress tugas
+
 type Status int
 
 const (
@@ -11,7 +13,7 @@ const (
 	InProgress
 	Done
 )
-
+// struktur task pada sistem
 type Task struct {
 	ID          int       `json:"id"`
 	Description string    `json:"description"`
@@ -19,7 +21,7 @@ type Task struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
-
+// pembungkus untuk daftar tugas
 type TaskWrapper struct {
 	Records []Task `json:"records"`
 }

@@ -40,7 +40,7 @@ func NewTaskService(repository repo.TaskRepository) TaskService {
 		repo: repository,
 	}
 }
-
+// implementasi method CreateTask
 func (s *taskService) CreateTask(description string) (*data.Task, error) {
 	if description == "" {
 		return nil, errors.New("deskripsi task tidak boleh kosong")
@@ -53,7 +53,7 @@ func (s *taskService) CreateTask(description string) (*data.Task, error) {
 
 	return s.repo.Create(task)
 }
-
+// implementasi method UpdateTask
 func (s *taskService) UpdateTask(id int, description string, status data.Status) (*data.Task, error) {
 	if description == "" {
 		return nil, errors.New("deskripsi task tidak boleh kosong")
@@ -76,7 +76,7 @@ func (s *taskService) UpdateTask(id int, description string, status data.Status)
 
 	return nil, fmt.Errorf("task dengan ID %d tidak ditemukan", id)
 }
-
+// implementasi method DeleteTask
 func (s *taskService) DeleteTask(id int) error {
 	tasks, err := s.repo.ReadAll()  // ✅ Sekarang sudah ada!
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *taskService) DeleteTask(id int) error {
 
 	return fmt.Errorf("task dengan ID %d tidak ditemukan", id)
 }
-
+// implementasi method CompleteTask
 func (s *taskService) CompleteTask(taskID int) error {
 	tasks, err := s.repo.ReadAll()  // ✅ Sekarang sudah ada!
 	if err != nil {
@@ -109,7 +109,7 @@ func (s *taskService) CompleteTask(taskID int) error {
 
 	return fmt.Errorf("task dengan ID %d tidak ditemukan", taskID)
 }
-
+// implementasi method GetTaskStats
 func (s *taskService) GetTaskStats() (*TaskStats, error) {
 	tasks, err := s.repo.ReadAll()  // ✅ Sekarang sudah ada!
 	if err != nil {

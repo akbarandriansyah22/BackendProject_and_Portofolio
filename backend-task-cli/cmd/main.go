@@ -18,7 +18,7 @@ var (
 )
 
 func main() {
-	// Setup
+	// alur kerja utama program
 	repo := repository.NewFileTaskRepository("task.json")
 	taskService = service.NewTaskService(repo)
 	scanner = bufio.NewScanner(os.Stdin)
@@ -53,7 +53,7 @@ func main() {
 		}
 	}
 }
-
+// MENUNJUKKAN MENU
 func showMenu() {
 	fmt.Println("\n" + strings.Repeat("=", 40))
 	fmt.Println("MENU:")
@@ -66,7 +66,7 @@ func showMenu() {
 	fmt.Println("0. Exit")
 	fmt.Println(strings.Repeat("=", 40))
 }
-
+// membaca input user
 func readInput(prompt string) string {
 	fmt.Print(prompt)
 	scanner.Scan()
@@ -84,13 +84,13 @@ func createTask() {
 		fmt.Println("Description cannot be empty!")
 		return
 	}
-
+// membuat task baru
 	task, err := taskService.CreateTask(description)
 	if err != nil {
 		fmt.Println(" Error:", err)
 		return
 	}
-
+// menampilkan informasi task yang dibuat
 	fmt.Printf("\nTask created successfully!\n")
 	fmt.Printf("   ID: %d\n", task.ID)
 	fmt.Printf("   Description: %s\n", task.Description)
@@ -114,7 +114,7 @@ func listTasks() {
 		fmt.Println("No tasks found. Create one first!")
 		return
 	}
-
+// menampilkan daftar task
 	for _, task := range tasks {
 		statusIcon := getStatusIcon(task.Status)
 		fmt.Printf("\n[%d] %s %s\n", task.ID, statusIcon, task.Description)
@@ -164,7 +164,7 @@ func updateTask() {
 			break
 		}
 	}
-
+// Jika task tidak ditemukan
 	if currentTask == nil {
 		fmt.Printf(" Task with ID %d not found!\n", id)
 		return
@@ -182,13 +182,13 @@ func updateTask() {
 	if newDesc == "" {
 		newDesc = currentTask.Description
 	}
-
+// Input new status
 	fmt.Println("\nStatus options:")
 	fmt.Println("  0 = Todo")
 	fmt.Println("  1 = In Progress")
 	fmt.Println("  2 = Done")
 	statusStr := readInput(fmt.Sprintf("New status [%d]: ", currentTask.Status))
-	
+// Jika user menekan Enter, tetap gunakan status lama
 	var newStatus data.Status
 	if statusStr == "" {
 		newStatus = currentTask.Status
@@ -232,7 +232,7 @@ func completeTask() {
 		return
 	}
 
-	// Show incomplete tasks only
+	// menampilkan daftar task yang belum selesai
 	fmt.Println("\nIncomplete tasks:")
 	hasIncomplete := false
 	for _, t := range tasks {
@@ -324,7 +324,7 @@ func showStats() {
 		fmt.Println(" Error:", err)
 		return
 	}
-
+// menampilkan statistik tugas
 	fmt.Printf("\nTotal Tasks:    %d\n", stats.TotalTasks)
 	fmt.Printf("Todo:           %d\n", stats.TodoCount)
 	fmt.Printf(" In Progress:    %d\n", stats.InProgressCount)
@@ -348,6 +348,8 @@ func statusToString(status data.Status) string {
 		return "Unknown"
 	}
 }
+
+// icon pada status
 
 func getStatusIcon(status data.Status) string {
 	switch status {

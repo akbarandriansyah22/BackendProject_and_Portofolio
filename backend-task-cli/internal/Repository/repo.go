@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// interface untuk kotnrak repository
+// interface untuk kontrak repository
 type TaskRepository interface {
 	Create(task *data.Task) (*data.Task, error)
 	Update(task *data.Task) (*data.Task, error)
@@ -25,7 +25,7 @@ type FileTaskRepository struct {
 }
 
 
-// ✅ CONSTRUCTOR
+// CONSTRUCTOR
 func NewFileTaskRepository(filePath string) TaskRepository {
 	return &FileTaskRepository{
 		filePath: filePath,
@@ -66,7 +66,7 @@ func (r *FileTaskRepository) writeTasks(tasks []data.Task) error {
 	}
 	defer file.Close()
 
-	
+	// Encode dengan indentasi untuk keterbacaan
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")  
 	
@@ -82,13 +82,13 @@ func (r *FileTaskRepository) Create(task *data.Task) (*data.Task, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	
+	// untuk membaca semua tasks
 	tasks, err := r.readTasks()
 	if err != nil {
 		return nil, err
 	}
 
-
+	// batas maksimal ukuran ID
 	var maxID int
 	for _, t := range tasks {
 		if t.ID > maxID {
@@ -96,12 +96,11 @@ func (r *FileTaskRepository) Create(task *data.Task) (*data.Task, error) {
 		}
 	}
 
-	
+	// informasi task baru
 	task.ID = maxID + 1
 	task.CreatedAt = time.Now()
 	task.UpdatedAt = time.Now()
 
-	
 	tasks = append(tasks, *task)
 
 	
