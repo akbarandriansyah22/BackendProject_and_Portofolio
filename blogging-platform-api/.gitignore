@@ -1,0 +1,27 @@
+# Binaries
+task-cli
+task-cli.exe
+*.exe
+*.out
+
+# Data files
+task.json
+*.json
+
+# Go build files
+*.o
+*.a
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go modules (optional)
+# go.sum
