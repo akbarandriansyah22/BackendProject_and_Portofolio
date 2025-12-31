@@ -44,7 +44,7 @@ func main() {
 
 	// 4. Konfigurasi Server
 	port := ":8080"
-	log.Printf("Server berjalan di http://localhost%s 🚀", port)
+	log.Printf("Server berjalan di http://localhost%s ", port)
 
 	server := &http.Server{
 		Addr:    port,

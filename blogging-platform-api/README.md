@@ -1,6 +1,6 @@
 ## Blogging Platform API
 
-This project is an implementation of the Blogging Platform API challenge from roadmap.sh. It is a beginner-level backend project designed to demonstrate the fundamentals of building a RESTful service using Go and PostgreSQL.
+This project is an implementation of the Blogging Platform API challenge from roadmap.sh. It is a beginner-level backend project designed to demonstrate the fundamentals of building a RESTful service using Go and PostgreSQL. (https://roadmap.sh/projects/blogging-platform-api)
 
 ## Features
 
@@ -30,7 +30,8 @@ To set up the project locally, follow these steps:
 
 Bash
 
-git clone https://github.com/yourusername/blogging-platform-api.git
+git clone (https://github.com/akbarandriansyah22/BackendProject_and_Portofolio/tree/main/blogging-platform-api)
+
 cd blogging-platform-api
 
 2. **Database Setup: Create a database named blogging_platform and execute the following SQL**:
