@@ -60,7 +60,7 @@ func (r *PaymentRepository) GetByID(id int) (*models.Payment, error) {
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("payment not found")
+		return nil, fmt.Errorf("payments not found")
 	}
 
 	return payment, err
@@ -71,7 +71,7 @@ func (r *PaymentRepository) GetByOrderID(orderID int) (*models.Payment, error) {
 	query := `
 		SELECT id, order_id, payment_method, amount, status, transaction_id, 
 		       paid_at, created_at, updated_at
-		FROM payment
+		FROM payments
 		WHERE order_id = $1
 	`
 
@@ -100,7 +100,7 @@ func (r *PaymentRepository) GetByTransactionID(transactionID string) (*models.Pa
 	query := `
 		SELECT id, order_id, payment_method, amount, status, transaction_id, 
 		       paid_at, created_at, updated_at
-		FROM payment
+		FROM payments
 		WHERE transaction_id = $1
 	`
 
@@ -128,7 +128,7 @@ func (r *PaymentRepository) GetByTransactionID(transactionID string) (*models.Pa
 func (r *PaymentRepository) GetAll(limit, offset int) ([]models.Payment, int64, error) {
 	// Get total count
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM payment`
+	countQuery := `SELECT COUNT(*) FROM payments`
 	if err := r.db.QueryRow(countQuery).Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -137,7 +137,7 @@ func (r *PaymentRepository) GetAll(limit, offset int) ([]models.Payment, int64, 
 	query := `
 		SELECT id, order_id, payment_method, amount, status, transaction_id, 
 		       paid_at, created_at, updated_at
-		FROM payment
+		FROM payments
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -174,7 +174,7 @@ func (r *PaymentRepository) GetAll(limit, offset int) ([]models.Payment, int64, 
 func (r *PaymentRepository) GetByStatus(status string, limit, offset int) ([]models.Payment, int64, error) {
 	// Get total count
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM payment WHERE status = $1`
+	countQuery := `SELECT COUNT(*) FROM payments WHERE status = $1`
 	if err := r.db.QueryRow(countQuery, status).Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -183,7 +183,7 @@ func (r *PaymentRepository) GetByStatus(status string, limit, offset int) ([]mod
 	query := `
 		SELECT id, order_id, payment_method, amount, status, transaction_id, 
 		       paid_at, created_at, updated_at
-		FROM payment
+		FROM payments
 		WHERE status = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -221,7 +221,7 @@ func (r *PaymentRepository) GetByStatus(status string, limit, offset int) ([]mod
 func (r *PaymentRepository) GetByPaymentMethod(paymentMethod string, limit, offset int) ([]models.Payment, int64, error) {
 	// Get total count
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM payment WHERE payment_method = $1`
+	countQuery := `SELECT COUNT(*) FROM payments WHERE payment_method = $1`
 	if err := r.db.QueryRow(countQuery, paymentMethod).Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -230,7 +230,7 @@ func (r *PaymentRepository) GetByPaymentMethod(paymentMethod string, limit, offs
 	query := `
 		SELECT id, order_id, payment_method, amount, status, transaction_id, 
 		       paid_at, created_at, updated_at
-		FROM payment
+		FROM payments
 		WHERE payment_method = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -268,7 +268,7 @@ func (r *PaymentRepository) GetByPaymentMethod(paymentMethod string, limit, offs
 func (r *PaymentRepository) GetByDateRange(startDate, endDate time.Time, limit, offset int) ([]models.Payment, int64, error) {
 	// Get total count
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM payment WHERE created_at BETWEEN $1 AND $2`
+	countQuery := `SELECT COUNT(*) FROM payments WHERE created_at BETWEEN $1 AND $2`
 	if err := r.db.QueryRow(countQuery, startDate, endDate).Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -277,7 +277,7 @@ func (r *PaymentRepository) GetByDateRange(startDate, endDate time.Time, limit, 
 	query := `
 		SELECT id, order_id, payment_method, amount, status, transaction_id, 
 		       paid_at, created_at, updated_at
-		FROM payment
+		FROM payments
 		WHERE created_at BETWEEN $1 AND $2
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4
@@ -314,7 +314,7 @@ func (r *PaymentRepository) GetByDateRange(startDate, endDate time.Time, limit, 
 // Update updates a payment
 func (r *PaymentRepository) Update(payment *models.Payment) error {
 	query := `
-		UPDATE payment
+		UPDATE payments
 		SET payment_method = $1, amount = $2, status = $3, 
 		    transaction_id = $4, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $5
@@ -334,7 +334,7 @@ func (r *PaymentRepository) Update(payment *models.Payment) error {
 // UpdateStatus updates payment status
 func (r *PaymentRepository) UpdateStatus(id int, status string) error {
 	query := `
-		UPDATE payment
+		UPDATE payments
 		SET status = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
@@ -359,7 +359,7 @@ func (r *PaymentRepository) UpdateStatus(id int, status string) error {
 // MarkAsPaid marks a payment as paid
 func (r *PaymentRepository) MarkAsPaid(id int, transactionID string) error {
 	query := `
-		UPDATE payment
+		UPDATE payments
 		SET status = $1, paid_at = $2, transaction_id = $3, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $4
 	`
@@ -384,7 +384,7 @@ func (r *PaymentRepository) MarkAsPaid(id int, transactionID string) error {
 // MarkAsFailed marks a payment as failed
 func (r *PaymentRepository) MarkAsFailed(id int) error {
 	query := `
-		UPDATE payment
+		UPDATE payments
 		SET status = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
@@ -409,7 +409,7 @@ func (r *PaymentRepository) MarkAsFailed(id int) error {
 // MarkAsRefunded marks a payment as refunded
 func (r *PaymentRepository) MarkAsRefunded(id int) error {
 	query := `
-		UPDATE payment
+		UPDATE payments
 		SET status = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
@@ -433,7 +433,7 @@ func (r *PaymentRepository) MarkAsRefunded(id int) error {
 
 // Delete deletes a payment (hard delete)
 func (r *PaymentRepository) Delete(id int) error {
-	query := `DELETE FROM payment WHERE id = $1`
+	query := `DELETE FROM payments WHERE id = $1`
 
 	result, err := r.db.Exec(query, id)
 	if err != nil {
@@ -462,7 +462,7 @@ func (r *PaymentRepository) TransactionIDExists(transactionID string) (bool, err
 
 // CountByStatus counts payment by status
 func (r *PaymentRepository) CountByStatus(status string) (int64, error) {
-	query := `SELECT COUNT(*) FROM payment WHERE status = $1`
+	query := `SELECT COUNT(*) FROM payments WHERE status = $1`
 	var count int64
 	err := r.db.QueryRow(query, status).Scan(&count)
 	return count, err
@@ -470,7 +470,7 @@ func (r *PaymentRepository) CountByStatus(status string) (int64, error) {
 
 // CountByPaymentMethod counts payment by payment method
 func (r *PaymentRepository) CountByPaymentMethod(paymentMethod string) (int64, error) {
-	query := `SELECT COUNT(*) FROM payment WHERE payment_method = $1`
+	query := `SELECT COUNT(*) FROM payments WHERE payment_method = $1`
 	var count int64
 	err := r.db.QueryRow(query, paymentMethod).Scan(&count)
 	return count, err
@@ -478,7 +478,7 @@ func (r *PaymentRepository) CountByPaymentMethod(paymentMethod string) (int64, e
 
 // GetTotalRevenue calculates total revenue from successful payment
 func (r *PaymentRepository) GetTotalRevenue() (float64, error) {
-	query := `SELECT COALESCE(SUM(amount), 0) FROM payment WHERE status = $1`
+	query := `SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = $1`
 	var total float64
 	err := r.db.QueryRow(query, models.PaymentStatusSuccess).Scan(&total)
 	return total, err
@@ -488,7 +488,7 @@ func (r *PaymentRepository) GetTotalRevenue() (float64, error) {
 func (r *PaymentRepository) GetRevenueByDateRange(startDate, endDate time.Time) (float64, error) {
 	query := `
 		SELECT COALESCE(SUM(amount), 0) 
-		FROM payment
+		FROM payments
 		WHERE status = $1 AND created_at BETWEEN $2 AND $3
 	`
 	var total float64
@@ -500,7 +500,7 @@ func (r *PaymentRepository) GetRevenueByDateRange(startDate, endDate time.Time) 
 func (r *PaymentRepository) GetRevenueByPaymentMethod(paymentMethod string) (float64, error) {
 	query := `
 		SELECT COALESCE(SUM(amount), 0) 
-		FROM payment 
+		FROM payments
 		WHERE status = $1 AND payment_method = $2
 	`
 	var total float64

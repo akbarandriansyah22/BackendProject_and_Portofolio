@@ -120,8 +120,7 @@ func (s *OrderService) CreateFromCart(userID int, shippingAddress, paymentMethod
 		Status:          "pending",
 		ShippingAddress: shippingAddress,
 		PaymentMethod:   paymentMethod,
-		Notes:           sql.NullString{String: notes, 
-			              Valid: notes != "",},
+		Notes:           sql.NullString{String: notes, Valid: notes != ""},
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
@@ -133,11 +132,15 @@ func (s *OrderService) CreateFromCart(userID int, shippingAddress, paymentMethod
 
 	// Create order items from cart items
 	for _, cartItem := range cartItems {
+		// ✅ FIX: Calculate subtotal
+		subtotal := cartItem.Price * float64(cartItem.Quantity)
+		
 		orderItem := &models.OrderItem{
 			OrderID:   order.ID,
 			ProductID: cartItem.ProductID,
 			Quantity:  cartItem.Quantity,
 			Price:     cartItem.Price,
+			Subtotal:  subtotal,  // ✅ FIX: Add subtotal field
 		}
 
 		if err := s.orderRepo.AddOrderItem(orderItem); err != nil {
@@ -147,17 +150,20 @@ func (s *OrderService) CreateFromCart(userID int, shippingAddress, paymentMethod
 			return nil, fmt.Errorf("failed to create order items")
 		}
 
-		// Decrement product stock
+		// ✅ FIX: Better error handling - rollback on stock failure
 		if err := s.productRepo.DecrementStock(cartItem.ProductID, cartItem.Quantity); err != nil {
 			utils.Error("OrderService.CreateFromCart: Failed to decrement stock - ProductID=%d, Error=%v", cartItem.ProductID, err)
-			// Continue anyway (stock will be handled manually)
+			// Rollback: delete order (this will cascade delete order items)
+			s.orderRepo.Delete(order.ID)
+			return nil, fmt.Errorf("failed to update stock. Order cancelled")
 		}
 	}
 
 	// Clear cart
 	if err := s.cartRepo.ClearCart(cart.ID); err != nil {
-		utils.Warn("OrderService.CreateFromCart: Failed to clear cart - CartID=%d, Error=%v", cart.ID, err)
-		// Not critical, continue
+		utils.Error("OrderService.CreateFromCart: Failed to clear cart - CartID=%d, Error=%v", cart.ID, err)
+		// Order already created successfully, cart clearing is not critical
+		// Continue and return the order
 	}
 
 	utils.Info("Order created from cart: OrderID=%d, OrderNumber=%s, UserID=%d, Total=%.2f", 
@@ -262,16 +268,21 @@ func (s *OrderService) GetOrderStats() (map[string]interface{}, error) {
 }
 
 // GetAllOrders gets all orders with pagination and filters (for admin)
-func (s *OrderService) GetAllOrders(page, limit int, status string, something int) ([]models.Order, int64, error) {
+// ✅ FIX: Rename parameter 'something' to 'userID'
+func (s *OrderService) GetAllOrders(page, limit int, status string, userID int) ([]models.Order, int64, error) {
 	offset := (page - 1) * limit
 
 	// Get orders with filters
-
 	filters := make(map[string]interface{})
-if status != "" {
-    filters["status"] = status
-}
-orders, total, err := s.orderRepo.GetAllWithFilters(filters, limit, offset)
+	if status != "" {
+		filters["status"] = status
+	}
+	// ✅ FIX: Now 'userID' is properly defined and used
+	if userID > 0 {
+		filters["user_id"] = userID
+	}
+
+	orders, total, err := s.orderRepo.GetAllWithFilters(filters, limit, offset)
 	if err != nil {
 		utils.Error("OrderService.GetAllOrders: Failed - Error=%v", err)
 		return nil, 0, fmt.Errorf("failed to get orders")

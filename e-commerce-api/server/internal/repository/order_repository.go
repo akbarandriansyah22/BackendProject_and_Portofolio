@@ -585,7 +585,7 @@ func (r *OrderRepository) SearchByOrderNumber(searchTerm string, limit, offset i
 
 	// Get orders
 	query := `
-		SELECT id, user_id, order_number, status, total_amount, 
+		SELECT id, user_id, order_number, status, total_amount, payment_method,
 		       shipping_address, shipping_phone, notes, created_at, updated_at
 		FROM orders
 		WHERE order_number ILIKE $1

@@ -19,7 +19,7 @@ func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 // Create creates a new category
 func (r *CategoryRepository) Create(category *models.Category) error {
 	query := `
-		INSERT INTO category (name, slug, description, parent_id, is_active)
+		INSERT INTO categories (name, slug, description, parent_id, is_active)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, created_at, updated_at
 	`
@@ -277,6 +277,10 @@ func (r *CategoryRepository) GetSubCategories(parentID int) ([]models.Category, 
 
 	return category, nil
 }
+// ✅ ADDED: GetByParentID - alias for GetSubCategories (dipanggil di category_service.go)
+func (r *CategoryRepository) GetByParentID(parentID int) ([]models.Category, error) {
+	return r.GetSubCategories(parentID)
+}
 
 // GetCategoryHierarchy retrieves categories in hierarchical structure
 func (r *CategoryRepository) GetCategoryHierarchy() ([]models.Category, error) {
@@ -319,6 +323,30 @@ func (r *CategoryRepository) Update(category *models.Category) error {
 		category.IsActive,
 		category.ID,
 	).Scan(&category.UpdatedAt)
+}
+// ✅ ADDED: UpdateStatus - update category active status (dipanggil di category_service.go)
+func (r *CategoryRepository) UpdateStatus(id int, isActive bool) error {
+	query := `
+		UPDATE categories
+		SET is_active = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	result, err := r.db.Exec(query, isActive, id)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("category not found")
+	}
+
+	return nil
 }
 
 // Delete deletes a category (hard delete)
@@ -428,6 +456,13 @@ func (r *CategoryRepository) CountTotal() (int64, error) {
 	err := r.db.QueryRow(query).Scan(&count)
 	return count, err
 }
+// ✅ ADDED: CountByStatus - count categories by active status (dipanggil di category_service.go)
+func (r *CategoryRepository) CountByStatus(isActive bool) (int64, error) {
+	query := `SELECT COUNT(*) FROM categories WHERE is_active = $1`
+	var count int64
+	err := r.db.QueryRow(query, isActive).Scan(&count)
+	return count, err
+}
 
 // CountSubCategories counts subcategories of a parent
 func (r *CategoryRepository) CountSubCategories(parentID int) (int64, error) {
@@ -473,4 +508,58 @@ func (r *CategoryRepository) Search(keyword string) ([]models.Category, error) {
 	}
 
 	return categories, nil
+}
+// ✅ ADDED: GetProducts - get products for a category (dipanggil di category_service.go)
+func (r *CategoryRepository) GetProducts(categoryID, limit, offset int) ([]models.Product, int64, error) {
+	// Get total count
+	var total int64
+	countQuery := `
+		SELECT COUNT(DISTINCT p.id)
+		FROM products p
+		INNER JOIN product_categories pc ON p.id = pc.product_id
+		WHERE pc.category_id = $1 AND p.is_active = true
+	`
+	if err := r.db.QueryRow(countQuery, categoryID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Get products
+	query := `
+		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.price, p.stock, 
+		       p.sku, p.image_url, p.is_active, p.created_at, p.updated_at
+		FROM products p
+		INNER JOIN product_categories pc ON p.id = pc.product_id
+		WHERE pc.category_id = $1 AND p.is_active = true
+		ORDER BY p.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := r.db.Query(query, categoryID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	products := []models.Product{}
+	for rows.Next() {
+		var p models.Product
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.Slug,
+			&p.Description,
+			&p.Price,
+			&p.Stock,
+			&p.SKU,
+			&p.ImageURL,
+			&p.IsActive,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		products = append(products, p)
+	}
+
+	return products, total, nil
 }

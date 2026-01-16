@@ -80,13 +80,10 @@ func (s *CartService) AddItem(userID, productID, quantity int) (*models.CartResp
 		return nil, fmt.Errorf("failed to add item to cart")
 	}
 
-	// Check if item already exists in cart
+	// process item already exists in cart
 	existingItem, err := s.cartRepo.GetCartItemByCartAndProduct(cart.ID, productID)
 	if err == nil && existingItem != nil {
-		// Item exists, update quantity
 		newQuantity := existingItem.Quantity + quantity
-		
-		// Check stock for new quantity
 		if product.Stock < newQuantity {
 			return nil, fmt.Errorf("insufficient stock. Available: %d, Already in cart: %d", product.Stock, existingItem.Quantity)
 		}
