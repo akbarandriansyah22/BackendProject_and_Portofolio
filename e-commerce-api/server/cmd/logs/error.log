@@ -1,0 +1,2 @@
+[36m[2026-01-16 16:19:22] [[35mFATAL[0m] [asm_amd64.s:1693]  Server error: failed to listen: listen tcp4 0.0.0.0:8080: bind: address already in use[0m
+[36m[2026-01-16 16:19:55] [[35mFATAL[0m] [asm_amd64.s:1693]  Server error: failed to listen: listen tcp4 0.0.0.0:8080: bind: address already in use[0m

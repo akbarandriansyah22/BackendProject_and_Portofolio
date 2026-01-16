@@ -29,11 +29,11 @@ func main() {
 	// 1. INITIALIZE LOGGER
 	// ============================================
 	if err := utils.InitLogger("logs", true); err != nil {
-		log.Fatalf("❌ Failed to initialize logger: %v", err)
+		log.Fatalf(" Failed to initialize logger: %v", err)
 	}
 	defer utils.CloseLogger()
 	
-	utils.Info("🚀 Starting E-Commerce API Server...")
+	utils.Info("Starting E-Commerce API Server...")
 
 	// ============================================
 	// 2. LOAD ENVIRONMENT VARIABLES
@@ -43,7 +43,7 @@ func main() {
 	
 	for _, path := range envPaths {
 		if err := godotenv.Load(path); err == nil {
-			utils.Info("✅ Loaded .env from: %s", path)
+			utils.Info(" Loaded .env from: %s", path)
 			envLoaded = true
 			break
 		}
@@ -58,7 +58,7 @@ func main() {
 	// ============================================
 	cfg, err := config.LoadWithValidation()
 	if err != nil {
-		utils.Fatal("❌ Config error: %v", err)
+		utils.Fatal(" Config error: %v", err)
 	}
 	cfg.PrintConfig()
 
@@ -67,9 +67,9 @@ func main() {
 	// ============================================
 	db := initDatabase(cfg)
 	defer func() {
-		utils.Info("🔌 Closing database connection...")
+		utils.Info(" Closing database connection...")
 		if err := database.Close(); err != nil {
-			utils.Error("❌ Error closing database: %v", err)
+			utils.Error(" Error closing database: %v", err)
 		}
 	}()
 
@@ -128,7 +128,7 @@ func main() {
 // ============================================
 
 func initDatabase(cfg *config.Config) *sql.DB {
-	utils.Info("🗄️  Initializing database...")
+	utils.Info(" Initializing database...")
 
 	dbConfig := database.Config{
 		Host:     cfg.Database.Host,
@@ -302,7 +302,7 @@ func registerRoutes(
 	adminOrders.Put("/:id/status", orderHandler.UpdateStatus)
 	adminOrders.Get("/stats", orderHandler.GetOrderStats)
 
-	utils.Info("✅ Routes registered successfully")
+	utils.Info("Routes registered successfully")
 }
 
 // ============================================
@@ -320,7 +320,7 @@ func healthCheckHandler(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":  "healthy",
 		"app":     "E-Commerce API",
-		"version": "1.0.0",
+		"version": "2.0.0",
 		"db":      "connected",
 	})
 }
@@ -347,26 +347,26 @@ func startServerWithGracefulShutdown(app *fiber.App, cfg *config.Config) {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		utils.Info("🚀 Server starting on %s", cfg.GetServerAddress())
+		utils.Info(" Server starting on %s", cfg.GetServerAddress())
 		if err := app.Listen(cfg.GetServerAddress()); err != nil {
-			utils.Fatal("❌ Server error: %v", err)
+			utils.Fatal(" Server error: %v", err)
 		}
 	}()
 
 	<-quit
-	utils.Info("🛑 Shutting down server...")
+	utils.Info(" Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := app.ShutdownWithContext(ctx); err != nil {
-		utils.Error("❌ Server shutdown error: %v", err)
+		utils.Error("Server shutdown error: %v", err)
 	}
 
 	if err := database.Close(); err != nil {
-		utils.Error("❌ Error closing database: %v", err)
+		utils.Error("Error closing database: %v", err)
 	}
 
 	utils.CloseLogger()
-	utils.Info("✅ Server stopped gracefully")
+	utils.Info(" Server stopped gracefully")
 }
