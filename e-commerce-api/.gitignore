@@ -6,3 +6,11 @@
 # Docker files
 docker-compose.yml
 Dockerfile
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Editor
+.vscode/
