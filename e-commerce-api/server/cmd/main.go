@@ -320,7 +320,7 @@ func healthCheckHandler(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":  "healthy",
 		"app":     "E-Commerce API",
-		"version": "2.0.0",
+		"version": "1.0.0",
 		"db":      "connected",
 	})
 }
