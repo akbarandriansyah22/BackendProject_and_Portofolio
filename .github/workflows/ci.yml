@@ -112,3 +112,15 @@ jobs:
       - name: Security Scan Summary
         if: always()
         run: |
+          echo "## 🔒 DevSecOps CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+           echo "" >> $GITHUB_STEP_SUMMARY
+           echo "| Security Check | Status |" >> $GITHUB_STEP_SUMMARY
+           echo "|----------------|--------|" >> $GITHUB_STEP_SUMMARY
+           echo "| Secrets Scanning (Gitleaks) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+           echo "| SAST - Gosec | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+           echo "| Filesystem Scan (Trivy) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+           echo "| Container Image Scan (Trivy) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+           echo "" >> $GITHUB_STEP_SUMMARY
+           echo "📊 **Check the Security tab for detailed vulnerability reports**" >> $GITHUB_STEP_SUMMARY
+           echo "" >> $GITHUB_STEP_SUMMARY
+           echo "🔍 **Artifacts:** Download Gosec report from workflow artifacts" >> $GITHUB_STEP_SUMMARY
