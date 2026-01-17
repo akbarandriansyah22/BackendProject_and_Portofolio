@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: ["main"]
 
+# ✅ TAMBAHKAN PERMISSIONS INI
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   security-ci:
     runs-on: ubuntu-latest
@@ -74,9 +80,10 @@ jobs:
           severity: "HIGH,CRITICAL"
 
       - name: Upload Trivy FS results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-fs-results.sarif"
+          category: "filesystem-scan"
 
       # -------------------------
       # Build Docker Image
@@ -102,9 +109,10 @@ jobs:
           severity: "HIGH,CRITICAL"
 
       - name: Upload Trivy Image results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-image-results.sarif"
+          category: "container-scan"
 
       # -------------------------
       # Summary Report
@@ -113,14 +121,14 @@ jobs:
         if: always()
         run: |
           echo "## 🔒 DevSecOps CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-           echo "" >> $GITHUB_STEP_SUMMARY
-           echo "| Security Check | Status |" >> $GITHUB_STEP_SUMMARY
-           echo "|----------------|--------|" >> $GITHUB_STEP_SUMMARY
-           echo "| Secrets Scanning (Gitleaks) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
-           echo "| SAST - Gosec | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
-           echo "| Filesystem Scan (Trivy) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
-           echo "| Container Image Scan (Trivy) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
-           echo "" >> $GITHUB_STEP_SUMMARY
-           echo "📊 **Check the Security tab for detailed vulnerability reports**" >> $GITHUB_STEP_SUMMARY
-           echo "" >> $GITHUB_STEP_SUMMARY
-           echo "🔍 **Artifacts:** Download Gosec report from workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Secrets Scanning (Gitleaks) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| SAST - Gosec | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Filesystem Scan (Trivy) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Image Scan (Trivy) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Check the Security tab for detailed vulnerability reports**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Artifacts:** Download Gosec report from workflow artifacts" >> $GITHUB_STEP_SUMMARY
