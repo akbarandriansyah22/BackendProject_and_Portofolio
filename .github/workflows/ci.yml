@@ -109,7 +109,7 @@ jobs:
       - name: Build Application
         run: |
           cd e-commerce-api
-          go build -v -o app ./cmd
+          go build -v -o app ./server/cmd
 
       # Run tests
       - name: Run Tests
