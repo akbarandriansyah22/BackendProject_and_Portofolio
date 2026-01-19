@@ -6,11 +6,17 @@ import (
 	"fmt"
 
 	"e-commerce-api/server/internal/models"
+	"e-commerce-api/server/internal/querybuilder"
 )
 
 type ProductRepository struct {
 	db *sql.DB
 }
+
+// Create reusable order builder for products (update)
+var productOrderBuilder = querybuilder.NewSQLBuilder().
+	AllowColumns("created_at", "updated_at", "price", "name", "stock").
+	SetDefault("created_at", "DESC")
 
 // NewProductRepository creates a new product repository
 func NewProductRepository(db *sql.DB) *ProductRepository {
@@ -651,68 +657,79 @@ func (r *ProductRepository) CountByCategory(categoryID int) (int64, error) {
 	return count, err
 }
 // GetAllWithFilters retrieves products with dynamic filters
+// UPDATED: Now uses query builder to prevent SQL injection
 func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, limit, offset int) ([]models.Product, int64, error) {
-	whereClause := " WHERE 1=1"
-	args := []interface{}{}
-	argCount := 1
+	// Use WHERE clause builder for safe parameterized queries
+	where := querybuilder.NewWhereClause()
 
-	// Search filter
+	// Search filter (safe - uses parameterized query)
 	if search, ok := filters["search"].(string); ok && search != "" {
-		whereClause += fmt.Sprintf(" AND (name ILIKE $%d OR description ILIKE $%d)", argCount, argCount)
-		args = append(args, "%"+search+"%")
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(
+			fmt.Sprintf("(name ILIKE $%d OR description ILIKE $%d)", argNum, argNum),
+			"%"+search+"%",
+		)
 	}
 
-	// Category filter
+	// Category filter (safe - uses parameterized query)
 	if categoryID, ok := filters["category_id"].(int); ok && categoryID > 0 {
-		whereClause += fmt.Sprintf(" AND id IN (SELECT product_id FROM product_categories WHERE category_id = $%d)", argCount)
-		args = append(args, categoryID)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(
+			fmt.Sprintf("id IN (SELECT product_id FROM product_categories WHERE category_id = $%d)", argNum),
+			categoryID,
+		)
 	}
 
-	// Price range filters
+	// Price range filters (safe - uses parameterized query)
 	if minPrice, ok := filters["min_price"].(float64); ok && minPrice > 0 {
-		whereClause += fmt.Sprintf(" AND price >= $%d", argCount)
-		args = append(args, minPrice)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(fmt.Sprintf("price >= $%d", argNum), minPrice)
 	}
 
 	if maxPrice, ok := filters["max_price"].(float64); ok && maxPrice > 0 {
-		whereClause += fmt.Sprintf(" AND price <= $%d", argCount)
-		args = append(args, maxPrice)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(fmt.Sprintf("price <= $%d", argNum), maxPrice)
 	}
 
 	// Only active products (default)
-	whereClause += " AND is_active = true"
+	where.AddCondition("is_active = true")
+
+	//  Build WHERE clause safely
+	whereClause, args := where.Build()
 
 	// Get total count
 	var total int64
-	countQuery := "SELECT COUNT(*) FROM products" + whereClause
+	countQuery := "SELECT COUNT(*) FROM products " + whereClause
 	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	// Sorting
-	sortBy := "created_at"
-	sortOrder := "DESC"
-	if sort, ok := filters["sort_by"].(string); ok && sort != "" {
+	//  Use query builder for ORDER BY (prevents SQL injection)
+	sortBy := ""
+	sortOrder := ""
+	
+	if sort, ok := filters["sort_by"].(string); ok {
 		sortBy = sort
 	}
-	if order, ok := filters["sort_order"].(string); ok && (order == "asc" || order == "ASC") {
-		sortOrder = "ASC"
+	if order, ok := filters["sort_order"].(string); ok {
+		sortOrder = order
 	}
+	
+	orderClause := productOrderBuilder.BuildOrderClause(sortBy, sortOrder)
 
-	// Get products
+	//  Safe pagination
 	args = append(args, limit, offset)
+	argCountForLimit := len(args) - 1
+	
+	// Build final query
 	query := fmt.Sprintf(`
 		SELECT id, name, slug, description, price, stock, sku, image_url, 
 		       is_active, created_at, updated_at
 		FROM products
 		%s
-		ORDER BY %s %s
+		%s
 		LIMIT $%d OFFSET $%d
-	`, whereClause, sortBy, sortOrder, argCount, argCount+1)
+	`, whereClause, orderClause, argCountForLimit, argCountForLimit+1)
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {

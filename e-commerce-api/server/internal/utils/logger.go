@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -47,16 +48,20 @@ type Logger struct {
 
 var globalLogger *Logger
 
-// InitLogger initializes the global logger
+// pintu gerbang app
 func InitLogger(logDir string, useColor bool) error {
 	// Create log directory if not exists
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := validateLogPath(logDir); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	if err := os.MkdirAll(logDir, 0750); err != nil {
 		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
 	// Create archive directory
 	archiveDir := filepath.Join(logDir, "archive")
-	if err := os.MkdirAll(archiveDir, 0755); err != nil {
+	if err := os.MkdirAll(archiveDir, 0750); err != nil {
 		return fmt.Errorf("failed to create archive directory: %w", err)
 	}
 
@@ -64,7 +69,7 @@ func InitLogger(logDir string, useColor bool) error {
 	logFile, err := os.OpenFile(
 		filepath.Join(logDir, "app.log"),
 		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
-		0666,
+		0600,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
@@ -73,10 +78,12 @@ func InitLogger(logDir string, useColor bool) error {
 	errorFile, err := os.OpenFile(
 		filepath.Join(logDir, "error.log"),
 		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
-		0666,
+		0600,
 	)
 	if err != nil {
-		logFile.Close()
+		if closeErr := logFile.Close(); closeErr != nil {
+			log.Printf("warning: failed to close log file:%v",closeErr)
+		}
 		return fmt.Errorf("failed to open error log file: %w", err)
 	}
 
@@ -97,15 +104,53 @@ func InitLogger(logDir string, useColor bool) error {
 
 	return nil
 }
+// NEW path validation to prevent directory
+func validateLogPath(logDir string) error {
+	// 1. Clean the path (remove .., //, etc)
+	cleanPath := filepath.Clean(logDir)
+	
+	// 2. Reject absolute paths (security: should be relative)
+	if filepath.IsAbs(cleanPath) {
+		return fmt.Errorf("log directory must be a relative path, got: %s", cleanPath)
+	}
+	
+	// 3. Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("path traversal detected in log directory: %s", cleanPath)
+	}
+	
+	// 4. Ensure path doesn't escape working directory
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+	
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	
+	// Path must be inside current working directory
+	if !strings.HasPrefix(absPath, cwd) {
+		return fmt.Errorf("log directory outside working directory: %s", cleanPath)
+	}
+	
+	return nil
+}
 
 // CloseLogger closes the log files
 func CloseLogger() {
 	if globalLogger != nil {
+		//  Handle errors from Close()
 		if globalLogger.logFile != nil {
-			globalLogger.logFile.Close()
+			if err := globalLogger.logFile.Close(); err != nil {
+				log.Printf("Warning: failed to close log file: %v", err)
+			}
 		}
 		if globalLogger.errorFile != nil {
-			globalLogger.errorFile.Close()
+			if err := globalLogger.errorFile.Close(); err != nil {
+				log.Printf("Warning: failed to close error file: %v", err)
+			}
 		}
 	}
 }
@@ -241,6 +286,12 @@ func LogError(err error, context string) {
 
 // RotateLogs rotates log files (can be called daily via cron)
 func RotateLogs(logDir string) error {
+//  validation path before rotation
+	if err := validateLogPath(logDir); err != nil {
+		return fmt.Errorf("invalid log directory: %w", err)
+	}
+
+
 	timestamp := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 	archiveDir := filepath.Join(logDir, "archive")
 
@@ -267,6 +318,12 @@ func RotateLogs(logDir string) error {
 
 // CleanOldLogs removes log files older than specified days
 func CleanOldLogs(logDir string, daysToKeep int) error {
+// Validation path
+	if err := validateLogPath(logDir); err != nil {
+		return fmt.Errorf("invalid log directory: %w", err)
+	}
+	
+
 	archiveDir := filepath.Join(logDir, "archive")
 	cutoffDate := time.Now().AddDate(0, 0, -daysToKeep)
 

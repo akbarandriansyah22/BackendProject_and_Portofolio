@@ -8,11 +8,18 @@ import (
 	"time"
 
 	"e-commerce-api/server/internal/models"
+	"e-commerce-api/server/internal/querybuilder"
 )
 
 type OrderRepository struct {
 	db *sql.DB
 }
+
+// Newquerybuilder it is save backend
+var orderOrderBuilder = querybuilder.NewSQLBuilder().
+	AllowColumns("created_at", "updated_at", "total_amount", "status", "order_number").
+	SetDefault("created_at", "DESC")
+
 
 // NewOrderRepository creates a new order repository
 func NewOrderRepository(db *sql.DB) *OrderRepository {
@@ -729,59 +736,74 @@ func (r *OrderRepository) GetTodayRevenue() (float64, error) {
 }
 
 // GetAllWithFilters retrieves orders with dynamic filters
+// ✅ UPDATED: Now uses query builder to prevent SQL injection
 func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limit, offset int) ([]models.Order, int64, error) {
-	// Build WHERE clause dynamically
-	whereClause := ""
-	args := []interface{}{}
-	argCount := 1
+	// NEW: Use WHERE clause builder for safe parameterized queries
+	where := querybuilder.NewWhereClause()
 
+	// Status filter
 	if status, ok := filters["status"].(string); ok && status != "" {
-		whereClause += fmt.Sprintf(" AND status = $%d", argCount)
-		args = append(args, status)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(fmt.Sprintf("status = $%d", argNum), status)
 	}
 
+	// User ID filter
 	if userID, ok := filters["user_id"].(int); ok && userID > 0 {
-		whereClause += fmt.Sprintf(" AND user_id = $%d", argCount)
-		args = append(args, userID)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(fmt.Sprintf("user_id = $%d", argNum), userID)
 	}
 
+	// Date range filters
 	if startDate, ok := filters["start_date"].(time.Time); ok && !startDate.IsZero() {
-		whereClause += fmt.Sprintf(" AND created_at >= $%d", argCount)
-		args = append(args, startDate)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(fmt.Sprintf("created_at >= $%d", argNum), startDate)
 	}
 
 	if endDate, ok := filters["end_date"].(time.Time); ok && !endDate.IsZero() {
-		whereClause += fmt.Sprintf(" AND created_at <= $%d", argCount)
-		args = append(args, endDate)
-		argCount++
+		argNum := where.ArgCount()
+		where.AddCondition(fmt.Sprintf("created_at <= $%d", argNum), endDate)
 	}
 
-	// Remove leading " AND"
-	if whereClause != "" {
-		whereClause = " WHERE" + whereClause[4:]
+	// Build WHERE clause
+	whereClause, args := where.Build()
+	if whereClause == "" {
+		whereClause = "WHERE 1=1"  // Ensure valid SQL if no filters
 	}
 
 	// Get total count
 	var total int64
-	countQuery := "SELECT COUNT(*) FROM orders" + whereClause
+	countQuery := "SELECT COUNT(*) FROM orders " + whereClause
 	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	// Get orders
+	//  NEW: Use query builder for ORDER BY (prevents SQL injection)
+	sortBy := ""
+	sortOrder := ""
+	
+	if sort, ok := filters["sort_by"].(string); ok {
+		sortBy = sort
+	}
+	if order, ok := filters["sort_order"].(string); ok {
+		sortOrder = order
+	}
+	
+	orderClause := orderOrderBuilder.BuildOrderClause(sortBy, sortOrder)
+
+	// NEW: Safe pagination
 	args = append(args, limit, offset)
+	argCountForLimit := len(args) - 1
+
+	// Build final query
 	query := fmt.Sprintf(`
 		SELECT id, user_id, order_number, status, total_amount, 
 		       payment_method, shipping_address, shipping_phone, notes, 
 		       created_at, updated_at
 		FROM orders
 		%s
-		ORDER BY created_at DESC
+		%s
 		LIMIT $%d OFFSET $%d
-	`, whereClause, argCount, argCount+1)
+	`, whereClause, orderClause, argCountForLimit, argCountForLimit+1)
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -812,5 +834,3 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 
 	return orders, total, nil
 }
-
-
