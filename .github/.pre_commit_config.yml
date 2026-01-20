@@ -1,0 +1,88 @@
+# Pre-commit hooks for local development security
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # ==================================
+  # CODE FORMATTING
+  # ==================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+
+  # ==================================
+  # SECRET SCANNING (CRITICAL!)
+  # ==================================
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+
+  # ==================================
+  # GO LINTING
+  # ==================================
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: go-vet
+      - id: go-imports
+      - id: go-mod-tidy
+      - id: golangci-lint
+        args: ["--timeout=5m"]
+
+  # ==================================
+  # SECURITY CHECKS
+  # ==================================
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: v3.68.0
+    hooks:
+      - id: trufflehog
+        args: ["--only-verified"]
+
+  # ==================================
+  # DOCKERFILE LINTING
+  # ==================================
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+
+  # ==================================
+  # COMMIT MESSAGE
+  # ==================================
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.1.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  # ==================================
+  # CUSTOM SCRIPTS
+  # ==================================
+  - repo: local
+    hooks:
+      # Run unit tests before commit
+      - id: go-test
+        name: Go Unit Tests
+        entry: bash -c 'cd e-commerce-api && go test -short ./...'
+        language: system
+        pass_filenames: false
+        files: \.go$
+
+      # Check for TODO/FIXME in production code
+      - id: check-todos
+        name: Check TODOs
+        entry: bash -c 'if grep -r "TODO\|FIXME\|XXX" --include="*.go" --exclude-dir=vendor e-commerce-api/; then echo "Found TODO/FIXME in code!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        files: \.go$

@@ -1,0 +1,241 @@
+rules:
+  # ============================================
+  # SQL INJECTION PREVENTION
+  # ============================================
+  - id: sql-injection-risk
+    languages: [go]
+    message: Potential SQL injection vulnerability. Use parameterized queries.
+    severity: ERROR
+    patterns:
+      - pattern: |
+          db.Query($QUERY + ...)
+      - pattern: |
+          db.Exec($QUERY + ...)
+      - pattern: |
+          fmt.Sprintf("... %s ...", $VAR)
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+
+  # ============================================
+  # HARDCODED SECRETS
+  # ============================================
+  - id: hardcoded-password
+    languages: [go]
+    message: Hardcoded password detected. Use environment variables.
+    severity: ERROR
+    patterns:
+      - pattern: |
+          $VAR := "password"
+      - pattern: |
+          Password: "..."
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  - id: hardcoded-api-key
+    languages: [go]
+    message: Hardcoded API key detected. Use environment variables.
+    severity: ERROR
+    patterns:
+      - pattern: |
+          $VAR := "sk_..."
+      - pattern: |
+          APIKey: "..."
+    metadata:
+      category: security
+
+  # ============================================
+  # WEAK CRYPTO
+  # ============================================
+  - id: weak-hash-md5
+    languages: [go]
+    message: MD5 is cryptographically broken. Use SHA-256 or bcrypt.
+    severity: ERROR
+    pattern: md5.New()
+    metadata:
+      category: security
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+
+  - id: weak-hash-sha1
+    languages: [go]
+    message: SHA-1 is cryptographically weak. Use SHA-256 or bcrypt.
+    severity: WARNING
+    pattern: sha1.New()
+    metadata:
+      category: security
+      cwe: "CWE-327"
+
+  # ============================================
+  # INSECURE RANDOM
+  # ============================================
+  - id: insecure-random
+    languages: [go]
+    message: Using math/rand for security purposes. Use crypto/rand instead.
+    severity: ERROR
+    patterns:
+      - pattern: |
+          import "math/rand"
+          ...
+          rand.$FUNC(...)
+    metadata:
+      category: security
+      cwe: "CWE-338: Use of Cryptographically Weak PRNG"
+
+  # ============================================
+  # ERROR HANDLING
+  # ============================================
+  - id: error-ignored
+    languages: [go]
+    message: Error is being ignored. Always handle errors.
+    severity: WARNING
+    patterns:
+      - pattern: |
+          $VAR, _ := $FUNC(...)
+    metadata:
+      category: best-practice
+
+  # ============================================
+  # JWT SECURITY
+  # ============================================
+  - id: jwt-none-algorithm
+    languages: [go]
+    message: JWT 'none' algorithm allows token forgery. Use HS256 or RS256.
+    severity: ERROR
+    pattern: |
+      jwt.SigningMethodNone
+    metadata:
+      category: security
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+
+  # ============================================
+  # FILE PATH TRAVERSAL
+  # ============================================
+  - id: path-traversal
+    languages: [go]
+    message: Potential path traversal vulnerability. Validate file paths.
+    severity: ERROR
+    patterns:
+      - pattern: |
+          os.Open($USER_INPUT)
+      - pattern: |
+          ioutil.ReadFile($USER_INPUT)
+    metadata:
+      category: security
+      cwe: "CWE-22: Path Traversal"
+
+  # ============================================
+  # XSS PREVENTION
+  # ============================================
+  - id: unsafe-html-template
+    languages: [go]
+    message: Using html/template unsafely. Use template.HTML() carefully.
+    severity: WARNING
+    pattern: |
+      template.HTML($USER_INPUT)
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting"
+
+  # ============================================
+  # COMMAND INJECTION
+  # ============================================
+  - id: command-injection
+    languages: [go]
+    message: Potential command injection. Validate and sanitize input.
+    severity: ERROR
+    patterns:
+      - pattern: |
+          exec.Command($CMD, $USER_INPUT)
+      - pattern: |
+          exec.CommandContext($CTX, $CMD, $USER_INPUT)
+    metadata:
+      category: security
+      cwe: "CWE-78: OS Command Injection"
+
+  # ============================================
+  # AUTHENTICATION BYPASS
+  # ============================================
+  - id: empty-password-check
+    languages: [go]
+    message: Empty password check. Always validate password strength.
+    severity: ERROR
+    pattern: |
+      if $PASSWORD == "" { ... }
+    metadata:
+      category: security
+
+  # ============================================
+  # LOGGING SENSITIVE DATA
+  # ============================================
+  - id: log-sensitive-data
+    languages: [go]
+    message: Logging potentially sensitive data. Avoid logging passwords/tokens.
+    severity: WARNING
+    patterns:
+      - pattern: |
+          log.Printf("... password: %s ...", $VAR)
+      - pattern: |
+          log.Println("... token: %s ...", $VAR)
+    metadata:
+      category: security
+      cwe: "CWE-532: Information Exposure Through Log Files"
+
+  # ============================================
+  # RACE CONDITIONS
+  # ============================================
+  - id: race-condition-map
+    languages: [go]
+    message: Concurrent map access without mutex. Use sync.Map or mutex.
+    severity: WARNING
+    patterns:
+      - pattern: |
+          go func() {
+            ...
+            $MAP[$KEY] = $VAL
+            ...
+          }()
+    metadata:
+      category: best-practice
+
+  # ============================================
+  # DANGEROUS FUNCTIONS
+  # ============================================
+  - id: dangerous-eval
+    languages: [go]
+    message: Using eval-like function is dangerous. Avoid dynamic code execution.
+    severity: ERROR
+    pattern: |
+      reflect.ValueOf(...).Call(...)
+    metadata:
+      category: security
+
+  # ============================================
+  # TLS/SSL SECURITY
+  # ============================================
+  - id: tls-insecure-skip-verify
+    languages: [go]
+    message: TLS certificate verification disabled. This is insecure!
+    severity: ERROR
+    pattern: |
+      tls.Config{InsecureSkipVerify: true}
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+
+  # ============================================
+  # TIME-BASED ATTACKS
+  # ============================================
+  - id: timing-attack-string-compare
+    languages: [go]
+    message: String comparison vulnerable to timing attacks. Use subtle.ConstantTimeCompare.
+    severity: WARNING
+    patterns:
+      - pattern: |
+          if $SECRET == $INPUT { ... }
+      - pattern: |
+          if $TOKEN == $INPUT { ... }
+    metadata:
+      category: security
+      cwe: "CWE-208: Observable Timing Discrepancy"
