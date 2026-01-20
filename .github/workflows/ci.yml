@@ -29,6 +29,12 @@ jobs:
         working-directory: e-commerce-api
         run: go test ./...
 
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: e-commerce-api
+
       - name: Build application
         working-directory: e-commerce-api
         run: go build ./...
