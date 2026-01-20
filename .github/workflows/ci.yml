@@ -10,19 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25.6"
+          cache: true
+
+      - name: Go mod tidy
+        working-directory: e-commerce-api
+        run: go mod tidy
 
       - name: Download dependencies
+        working-directory: e-commerce-api
         run: go mod download
 
       - name: Run tests
+        working-directory: e-commerce-api
         run: go test ./...
 
       - name: Build application
-        run: go build -v ./...
+        working-directory: e-commerce-api
+        run: go build ./...
