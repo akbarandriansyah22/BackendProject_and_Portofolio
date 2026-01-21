@@ -181,15 +181,7 @@ func getDurationEnv(key string, defaultValue int) time.Duration {
 	return time.Duration(getIntEnv(key, defaultValue))
 }
 
-// getBoolEnv gets boolean environment variable with default value
-func getBoolEnv(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		if boolValue, err := strconv.ParseBool(value); err == nil {
-			return boolValue
-		}
-	}
-	return defaultValue
-}
+
 
 // getSliceEnv gets slice environment variable with default value
 func getSliceEnv(key string, defaultValue []string) []string {

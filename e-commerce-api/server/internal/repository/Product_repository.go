@@ -4,6 +4,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"e-commerce-api/server/internal/models"
 	"e-commerce-api/server/internal/querybuilder"
@@ -940,7 +941,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 		args[i] = id
 	}
-	inClause := "(" + fmt.Sprintf("%s", placeholders[0])
+	inClause := "(" + strings.Join(placeholders, ",")
 	for i := 1; i < len(placeholders); i++ {
 		inClause += ", " + placeholders[i]
 	}
