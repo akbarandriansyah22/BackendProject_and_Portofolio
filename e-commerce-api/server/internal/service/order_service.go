@@ -67,123 +67,110 @@ func (s *OrderService) GetByOrderNumber(orderNumber string) (*models.Order, erro
 }
 
 // CreateFromCart creates order from user's cart
-func (s *OrderService) CreateFromCart(userID int, shippingAddress, paymentMethod, notes string) (*models.Order, error) {
-	// Get cart
-	cart, err := s.cartRepo.GetOrCreateCart(userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cart")
-	}
+func (s *OrderService) CreateFromCart(
+    userID int,
+    shippingAddress, paymentMethod, notes string,
+) (*models.Order, error) {
 
-	// Get cart items
-	cartItems, err := s.cartRepo.GetCartItems(cart.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cart items")
-	}
-
-	// Validate cart is not empty
-	if len(cartItems) == 0 {
-		return nil, fmt.Errorf("cart is empty")
-	}
-
-	// Validate each item and calculate total
-	var totalAmount float64
-	for _, item := range cartItems {
-		// Get current product info
-		product, err := s.productRepo.GetByID(item.ProductID)
-		if err != nil {
-			return nil, fmt.Errorf("product '%s' is no longer available", item.Product.Name)
-		}
-
-		// Check if product is active
-		if !product.IsActive {
-			return nil, fmt.Errorf("product '%s' is not available", product.Name)
-		}
-
-		// Check stock
-		if product.Stock < item.Quantity {
-			return nil, fmt.Errorf("insufficient stock for '%s'. Available: %d, Requested: %d", 
-				product.Name, product.Stock, item.Quantity)
-		}
-
-		// Calculate total
-		totalAmount += item.Price * float64(item.Quantity)
-	}
-
-	// Generate order number
-	orderNumber := s.generateOrderNumber()
-
-	// Create order
-	order := &models.Order{
-		UserID:          userID,
-		OrderNumber:     orderNumber,
-		TotalAmount:     totalAmount,
-		Status:          "pending",
-		ShippingAddress: shippingAddress,
-		PaymentMethod:   paymentMethod,
-		Notes:           sql.NullString{String: notes, Valid: notes != ""},
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-	}
-
-	if err := s.orderRepo.Create(order); err != nil {
-		utils.Error("OrderService.CreateFromCart: Failed to create order - UserID=%d, Error=%v", userID, err)
-		return nil, fmt.Errorf("failed to create order")
-	}
-
-	// Create order items from cart items
-	for _, cartItem := range cartItems {
-		//  Calculate subtotal
-		subtotal := cartItem.Price * float64(cartItem.Quantity)
-		
-		orderItem := &models.OrderItem{
-			OrderID:   order.ID,
-			ProductID: cartItem.ProductID,
-			Quantity:  cartItem.Quantity,
-			Price:     cartItem.Price,
-			Subtotal:  subtotal,  //  Add subtotal field
-		}
-
-		if err := s.orderRepo.AddOrderItem(orderItem); err != nil {
-    utils.Error(
-        "OrderService.CreateFromCart: failed to add order item (order_id=%d): %v",
-        order.ID, err,
-    )
-
-    // Rollback
-    if rbErr := s.orderRepo.Delete(order.ID); rbErr != nil {
-        utils.Error(
-            "OrderService.CreateFromCart: rollback failed (order_id=%d): %v",
-            order.ID, rbErr,
-        )
+    // Get cart
+    cart, err := s.cartRepo.GetOrCreateCart(userID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get cart")
     }
 
-    return nil, fmt.Errorf("failed to create order items: %w", err)
+    // Get cart items
+    cartItems, err := s.cartRepo.GetCartItems(cart.ID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get cart items")
+    }
+
+    if len(cartItems) == 0 {
+        return nil, fmt.Errorf("cart is empty")
+    }
+
+    // Validate & calculate total
+    var totalAmount float64
+    for _, item := range cartItems {
+        product, err := s.productRepo.GetByID(item.ProductID)
+        if err != nil {
+            return nil, fmt.Errorf("product is no longer available")
+        }
+
+        if !product.IsActive {
+            return nil, fmt.Errorf("product '%s' is not available", product.Name)
+        }
+
+        if product.Stock < item.Quantity {
+            return nil, fmt.Errorf(
+                "insufficient stock for '%s'. Available: %d, Requested: %d",
+                product.Name, product.Stock, item.Quantity,
+            )
+        }
+
+        totalAmount += item.Price * float64(item.Quantity)
+    }
+
+    // Create order
+    order := &models.Order{
+        UserID:          userID,
+        OrderNumber:     s.generateOrderNumber(),
+        TotalAmount:     totalAmount,
+        Status:          "pending",
+        ShippingAddress: shippingAddress,
+        PaymentMethod:   paymentMethod,
+        Notes:           sql.NullString{String: notes, Valid: notes != ""},
+        CreatedAt:       time.Now(),
+        UpdatedAt:       time.Now(),
+    }
+
+    if err := s.orderRepo.Create(order); err != nil {
+        utils.Error("OrderService.CreateFromCart: create order failed: %v", err)
+        return nil, fmt.Errorf("failed to create order")
+    }
+
+    // Create order items + decrement stock
+    for _, cartItem := range cartItems {
+
+        orderItem := &models.OrderItem{
+            OrderID:   order.ID,
+            ProductID: cartItem.ProductID,
+            Quantity:  cartItem.Quantity,
+            Price:     cartItem.Price,
+            Subtotal:  cartItem.Price * float64(cartItem.Quantity),
+        }
+
+        if err := s.orderRepo.AddOrderItem(orderItem); err != nil {
+            utils.Error("add order item failed (order_id=%d): %v", order.ID, err)
+
+            if rbErr := s.orderRepo.Delete(order.ID); rbErr != nil {
+                utils.Error("rollback failed (order_id=%d): %v", order.ID, rbErr)
+            }
+            return nil, fmt.Errorf("failed to create order items")
+        }
+
+        if err := s.productRepo.DecrementStock(cartItem.ProductID, cartItem.Quantity); err != nil {
+            utils.Error("decrement stock failed (product_id=%d): %v", cartItem.ProductID, err)
+
+            if rbErr := s.orderRepo.Delete(order.ID); rbErr != nil {
+                utils.Error("rollback failed (order_id=%d): %v", order.ID, rbErr)
+            }
+            return nil, fmt.Errorf("failed to update stock")
+        }
+    }
+
+    // Clear cart (non-critical)
+    if err := s.cartRepo.ClearCart(cart.ID); err != nil {
+        utils.Error("clear cart failed (cart_id=%d): %v", cart.ID, err)
+    }
+
+    fullOrder, err := s.orderRepo.GetByID(order.ID)
+    if err != nil {
+        return nil, fmt.Errorf("order created but failed to fetch details")
+    }
+
+    return fullOrder, nil
 }
 
-
-		// ✅ FIX: Better error handling - rollback on stock failure
-		if err := s.productRepo.DecrementStock(cartItem.ProductID, cartItem.Quantity); err != nil {
-			utils.Error("OrderService.CreateFromCart: Failed to decrement stock - ProductID=%d, Error=%v", cartItem.ProductID, err)
-			// Rollback: delete order (this will cascade delete order items)
-			s.orderRepo.Delete(order.ID)
-			return nil, fmt.Errorf("failed to update stock. Order cancelled")
-		}
-	}
-
-	// Clear cart
-	if err := s.cartRepo.ClearCart(cart.ID); err != nil {
-		utils.Error("OrderService.CreateFromCart: Failed to clear cart - CartID=%d, Error=%v", cart.ID, err)
-		// Order already created successfully, cart clearing is not critical
-		// Continue and return the order
-	}
-
-	utils.Info("Order created from cart: OrderID=%d, OrderNumber=%s, UserID=%d, Total=%.2f", 
-		order.ID, order.OrderNumber, userID, totalAmount)
-
-	// Get full order with items
-	fullOrder, _ := s.orderRepo.GetByID(order.ID)
-	return fullOrder, nil
-}
 
 // UpdateStatus updates order status
 func (s *OrderService) UpdateStatus(orderID int, status string) error {
