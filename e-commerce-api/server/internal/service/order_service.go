@@ -132,7 +132,7 @@ func (s *OrderService) CreateFromCart(userID int, shippingAddress, paymentMethod
 
 	// Create order items from cart items
 	for _, cartItem := range cartItems {
-		// ✅ FIX: Calculate subtotal
+		//  Calculate subtotal
 		subtotal := cartItem.Price * float64(cartItem.Quantity)
 		
 		orderItem := &models.OrderItem{
@@ -140,15 +140,26 @@ func (s *OrderService) CreateFromCart(userID int, shippingAddress, paymentMethod
 			ProductID: cartItem.ProductID,
 			Quantity:  cartItem.Quantity,
 			Price:     cartItem.Price,
-			Subtotal:  subtotal,  // ✅ FIX: Add subtotal field
+			Subtotal:  subtotal,  //  Add subtotal field
 		}
 
 		if err := s.orderRepo.AddOrderItem(orderItem); err != nil {
-			utils.Error("OrderService.CreateFromCart: Failed to add order item - OrderID=%d, Error=%v", order.ID, err)
-			// Rollback: delete order
-			s.orderRepo.Delete(order.ID)
-			return nil, fmt.Errorf("failed to create order items")
-		}
+    utils.Error(
+        "OrderService.CreateFromCart: failed to add order item (order_id=%d): %v",
+        order.ID, err,
+    )
+
+    // Rollback
+    if rbErr := s.orderRepo.Delete(order.ID); rbErr != nil {
+        utils.Error(
+            "OrderService.CreateFromCart: rollback failed (order_id=%d): %v",
+            order.ID, rbErr,
+        )
+    }
+
+    return nil, fmt.Errorf("failed to create order items: %w", err)
+}
+
 
 		// ✅ FIX: Better error handling - rollback on stock failure
 		if err := s.productRepo.DecrementStock(cartItem.ProductID, cartItem.Quantity); err != nil {
