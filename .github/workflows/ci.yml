@@ -23,7 +23,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.6"
+          go-version: "1.25.2"
           cache: true
 
       # =====================
@@ -45,7 +45,7 @@ jobs:
       - name: Run GoSec (SAST)
         uses: securego/gosec@v2.22.0
         with:
-          args: ./...
+          args: ./e-commerce-api/...
 
       # =====================
       # Dependency Scan (SCA)
