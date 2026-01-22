@@ -15,13 +15,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/joho/godotenv"
 
-	"e-commerce-api/server/internal/config"
-	"e-commerce-api/server/internal/database"
-	"e-commerce-api/server/internal/handler"
-	"e-commerce-api/server/internal/middleware"
-	"e-commerce-api/server/internal/repository"
-	"e-commerce-api/server/internal/service"
-	"e-commerce-api/server/internal/utils"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/config"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/database"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/handler"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/middleware"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/repository"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/service"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/utils"
 )
 
 func main() {

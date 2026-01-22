@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	models "e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type UserRepository struct {

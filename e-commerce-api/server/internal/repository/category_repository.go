@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type CategoryRepository struct {

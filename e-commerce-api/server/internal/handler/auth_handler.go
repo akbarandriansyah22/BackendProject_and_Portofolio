@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"e-commerce-api/server/internal/middleware"
-	"e-commerce-api/server/internal/models"
-	"e-commerce-api/server/internal/service"
-	"e-commerce-api/server/internal/utils"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/middleware"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/service"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 )

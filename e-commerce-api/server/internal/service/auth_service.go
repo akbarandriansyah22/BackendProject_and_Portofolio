@@ -3,9 +3,9 @@ package service
 import (
 	"fmt"
 
-	"e-commerce-api/server/internal/models"
-	"e-commerce-api/server/internal/repository"
-	"e-commerce-api/server/internal/utils"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/repository"
+	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/utils"
 )
 
 // AuthService handles authentication business logic

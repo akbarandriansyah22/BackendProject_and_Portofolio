@@ -1,4 +1,4 @@
-module e-commerce-api
+module github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api
 
 go 1.24.0
 
