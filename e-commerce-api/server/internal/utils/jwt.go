@@ -86,12 +86,14 @@ func GenerateRefreshToken(userID int, email string, roleID int, fullName string,
 func ParseToken(tokenString string, secret string) (*JWTClaims, error) {
 	// Parse token
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		// Validate signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(secret), nil
-	})
+	// Validate signing method 
+	if token.Method != jwt.SigningMethodHS256 {
+		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+	}
+
+	return []byte(secret), nil
+})
+
 
 	// Check for parsing errors
 	if err != nil {
@@ -157,7 +159,7 @@ func ExtractRoleID(tokenString string, secret string) (int, error) {
 // Fungsi untuk cek apakah token sudah expired
 func IsTokenExpired(tokenString string, secret string) bool {
 	claims, err := ParseToken(tokenString, secret)
-	if err != nil {
+	if err != nil || claims.ExpiresAt == nil { 
 		return true // If can't parse, consider expired
 	}
 
@@ -172,6 +174,11 @@ func GetTokenExpiration(tokenString string, secret string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
+
+	if claims.ExpiresAt == nil {
+		return time.Time{}, fmt.Errorf("token has no expiration")
+	}
+
 	return claims.ExpiresAt.Time, nil
 }
 
@@ -255,10 +262,27 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 		return nil, err
 	}
 
-	isExpired := claims.ExpiresAt.Time.Before(time.Now())
-	remaining := time.Until(claims.ExpiresAt.Time)
-	if remaining < 0 {
-		remaining = 0
+	var (
+		issuedAt  time.Time
+		expiresAt time.Time
+		remaining time.Duration
+		isExpired bool
+	)
+
+	if claims.IssuedAt != nil {
+		issuedAt = claims.IssuedAt.Time
+	}
+
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+		isExpired = expiresAt.Before(time.Now())
+
+		remaining = time.Until(expiresAt)
+		if remaining < 0 {
+			remaining = 0
+		}
+	} else {
+		isExpired = true
 	}
 
 	info := map[string]interface{}{
@@ -266,8 +290,8 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 		"email":      claims.Email,
 		"role_id":    claims.RoleID,
 		"full_name":  claims.FullName,
-		"issued_at":  claims.IssuedAt.Time,
-		"expires_at": claims.ExpiresAt.Time,
+		"issued_at":  issuedAt,
+		"expires_at": expiresAt,
 		"issuer":     claims.Issuer,
 		"is_expired": isExpired,
 		"remaining":  remaining.String(),
@@ -275,6 +299,7 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 
 	return info, nil
 }
+
 
 // ============================================
 // CONSTANTS
