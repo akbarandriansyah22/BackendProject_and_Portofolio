@@ -16,7 +16,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.0"
+          go-version: "1.22.6"
           cache: true
 
       # =====================
@@ -25,7 +25,7 @@ jobs:
       - name: Download dependencies
         run: |
           cd e-commerce-api
-          go mod tidy
+          go mod tidy -check
           go mod download
 
       # =====================
@@ -34,7 +34,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v1.55.2
           working-directory: e-commerce-api
           args: --timeout=5m
 
@@ -42,6 +42,10 @@ jobs:
         uses: securego/gosec@v2.22.0
         with:
           args: -fmt sarif -out gosec.sarif ./e-commerce-api/...
+      - name: Upload GoSec SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec.sarif
 
       # =====================
       # SCA
