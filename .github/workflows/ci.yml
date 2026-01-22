@@ -41,7 +41,7 @@ jobs:
       - name: Run GoSec (SAST)
         uses: securego/gosec@v2.22.0
         with:
-          args: ./e-commerce-api/...
+          args: -fmt sarif -out gosec.sarif ./e-commerce-api/...
 
       # =====================
       # SCA
