@@ -723,6 +723,7 @@ func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, li
 	argCountForLimit := len(args) - 1
 	
 	// Build final query
+	// #nosec G201 -- whereClause and orderClause use whitelisted columns only
 	query := fmt.Sprintf(`
 		SELECT id, name, slug, description, price, stock, sku, image_url, 
 		       is_active, created_at, updated_at
@@ -948,6 +949,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	inClause += ")"
 
 	// Get total count
+	// #nosec G201 -- inClause is generated from validated category IDs
 	var total int64
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT p.id)
@@ -960,6 +962,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	}
 
 	// Get products
+	// #nosec G201 -- inClause is generated from validated category IDs
 	args = append(args, limit, offset)
 	query := fmt.Sprintf(`
 		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.price, p.stock, 

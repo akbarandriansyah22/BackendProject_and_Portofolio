@@ -66,6 +66,7 @@ func InitLogger(logDir string, useColor bool) error {
 	}
 
 	// Open log files
+	// #nosec G304 -- logDir comes from internal configuration, not user input
 	logFile, err := os.OpenFile(
 		filepath.Join(logDir, "app.log"),
 		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
@@ -74,7 +75,7 @@ func InitLogger(logDir string, useColor bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
-
+    // #nosec G304 -- logDir comes from internal configuration, not user input
 	errorFile, err := os.OpenFile(
 		filepath.Join(logDir, "error.log"),
 		os.O_CREATE|os.O_WRONLY|os.O_APPEND,

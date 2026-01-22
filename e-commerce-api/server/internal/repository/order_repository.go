@@ -794,7 +794,9 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 	args = append(args, limit, offset)
 	argCountForLimit := len(args) - 1
 
-	// Build final query
+	  // Build final query
+     // #nosec G201 -- whereClause uses parameterized conditions only,
+    // and orderClause is constructed from a fixed whitelist of allowed columns and directions
 	query := fmt.Sprintf(`
 		SELECT id, user_id, order_number, status, total_amount, 
 		       payment_method, shipping_address, shipping_phone, notes, 
