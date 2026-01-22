@@ -9,14 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: e-commerce-api
-
     steps:
-      # =====================
-      # Checkout & Setup
-      # =====================
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -30,25 +23,26 @@ jobs:
       # Dependencies
       # =====================
       - name: Download dependencies
-        run: go mod download
+        run: |
+          cd e-commerce-api
+          go mod tidy
+          go mod download
 
       # =====================
-      # Static Analysis (SAST)
+      # Static Analysis
       # =====================
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          working-directory: e-commerce-api
-          args: --timeout=5m
+        run: |
+          cd e-commerce-api
+          golangci-lint run --timeout=5m
 
-      - name: Run GoSec (SAST)
-        uses: securego/gosec@v2.22.0
-        with:
-          args: ./e-commerce-api/...
+      - name: Run GoSec
+        run: |
+          cd e-commerce-api
+          gosec ./...
 
       # =====================
-      # Dependency Scan (SCA)
+      # SCA
       # =====================
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.24.0
@@ -58,13 +52,14 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 1
           ignore-unfixed: true
-          format: table
 
       # =====================
-      # Docker Build & Scan
+      # Docker
       # =====================
       - name: Build Docker image
-        run: docker build -t e-commerce-api:ci .
+        run: |
+          cd e-commerce-api
+          docker build -t e-commerce-api:ci .
 
       - name: Run Trivy image scan
         uses: aquasecurity/trivy-action@0.24.0
@@ -73,60 +68,16 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 1
           ignore-unfixed: true
-          format:
-            table
-
-            # =====================
-      # SAST (GoSec) SARIF
-      # =====================
-      - name: Run GoSec (SARIF)
-        run: gosec -fmt sarif -out gosec.sarif ./...
-
-      - name: Upload GoSec SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gosec.sarif
-
-      # =====================
-      # Trivy FS SARIF
-      # =====================
-      - name: Run Trivy filesystem scan (SARIF)
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: fs
-          scan-ref: e-commerce-api
-          format: sarif
-          output: trivy-fs.sarif
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-
-      - name: Upload Trivy filesystem SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-fs.sarif
-
-      # =====================
-      # Trivy Image SARIF
-      # =====================
-      - name: Run Trivy image scan (SARIF)
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          image-ref: e-commerce-api:ci
-          format: sarif
-          output: trivy-image.sarif
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-
-      - name: Upload Trivy image SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-image.sarif
 
       # =====================
       # Test & Build
       # =====================
       - name: Run tests
-        run: go test ./...
+        run: |
+          cd e-commerce-api
+          go test ./...
 
       - name: Build application
-        run: go build ./...
+        run: |
+          cd e-commerce-api
+          go build ./...
