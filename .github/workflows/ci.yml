@@ -32,9 +32,11 @@ jobs:
       # Static Analysis
       # =====================
       - name: Run golangci-lint
-        run: |
-          cd e-commerce-api
-          golangci-lint run --timeout=5m
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: e-commerce-api
+          args: --timeout=5m
 
       - name: Run GoSec
         run: |
