@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/akbarandriansyah22/Devops_Portofolio/e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type CartRepository struct {
