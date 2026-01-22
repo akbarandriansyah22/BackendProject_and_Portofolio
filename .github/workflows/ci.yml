@@ -38,10 +38,10 @@ jobs:
           working-directory: e-commerce-api
           args: --timeout=5m
 
-      - name: Run GoSec
-        run: |
-          cd e-commerce-api
-          gosec ./...
+      - name: Run GoSec (SAST)
+        uses: securego/gosec@v2.22.0
+        with:
+          args: ./e-commerce-api/...
 
       # =====================
       # SCA
