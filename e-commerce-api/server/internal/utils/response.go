@@ -313,6 +313,7 @@ const (
 	// Auth errors
 	ErrInvalidCredentials = "Invalid email or password"
 	ErrEmailExists        = "Email already exists"
+	// #nosec G101 -- this is an error message, not a credential
 	ErrInvalidToken       = "Invalid or expired token"
 	
 	// Validation errors

@@ -949,8 +949,8 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	inClause += ")"
 
 	// Get total count
-	// #nosec G201 -- inClause is generated from validated category IDs
 	var total int64
+	// #nosec G201 -- inClause is generated from validated category IDs
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT p.id)
 		FROM products p
@@ -962,8 +962,8 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	}
 
 	// Get products
-	// #nosec G201 -- inClause is generated from validated category IDs
 	args = append(args, limit, offset)
+	// #nosec G201 -- inClause is generated from validated category IDs
 	query := fmt.Sprintf(`
 		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.price, p.stock, 
 		       p.sku, p.image_url, p.is_active, p.created_at, p.updated_at
