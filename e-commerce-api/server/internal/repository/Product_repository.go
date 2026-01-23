@@ -449,7 +449,11 @@ func (r *ProductRepository) Search(keyword string, limit, offset int) ([]models.
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -502,7 +506,11 @@ func (r *ProductRepository) GetByPriceRange(minPrice, maxPrice float64, limit, o
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -543,7 +551,11 @@ func (r *ProductRepository) GetLowStock(threshold int, limit int) ([]models.Prod
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -592,7 +604,11 @@ func (r *ProductRepository) GetOutOfStock(limit, offset int) ([]models.Product, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -750,7 +766,11 @@ func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, li
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -791,7 +811,11 @@ func (r *ProductRepository) GetFeatured(limit int) ([]models.Product, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -919,7 +943,11 @@ func (r *ProductRepository) GetCategories(productID int) ([]models.Category, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	categories := []models.Category{}
 	for rows.Next() {
@@ -991,7 +1019,11 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+		defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
