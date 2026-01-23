@@ -4,6 +4,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
@@ -131,7 +132,11 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -181,7 +186,11 @@ func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int6
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -236,7 +245,11 @@ func (r *ProductRepository) GetByCategory(categoryID int, limit, offset int) ([]
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	products := []models.Product{}
 	for rows.Next() {

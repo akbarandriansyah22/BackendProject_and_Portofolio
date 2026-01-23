@@ -164,7 +164,7 @@ func IsTokenExpired(tokenString string, secret string) bool {
 	}
 
 	// Check if token is expired
-	return claims.ExpiresAt.Time.Before(time.Now())
+	return claims.ExpiresAt.Before(time.Now())
 }
 
 // GetTokenExpiration gets token expiration time
