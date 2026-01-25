@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
@@ -146,7 +147,11 @@ func (r *PaymentRepository) GetAll(limit, offset int) ([]models.Payment, int64, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+			defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	payment := []models.Payment{}
 	for rows.Next() {
@@ -193,7 +198,11 @@ func (r *PaymentRepository) GetByStatus(status string, limit, offset int) ([]mod
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+			defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	payment := []models.Payment{}
 	for rows.Next() {
@@ -240,7 +249,11 @@ func (r *PaymentRepository) GetByPaymentMethod(paymentMethod string, limit, offs
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+			defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	payment := []models.Payment{}
 	for rows.Next() {
@@ -287,7 +300,11 @@ func (r *PaymentRepository) GetByDateRange(startDate, endDate time.Time, limit, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+			defer func() {
+	if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+	}
+}()
 
 	payment := []models.Payment{}
 	for rows.Next() {

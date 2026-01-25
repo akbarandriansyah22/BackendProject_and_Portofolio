@@ -163,7 +163,7 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 }
 
 // GetActive retrieves only active products with pagination
-// ✅ METHOD INI DITAMBAHKAN!
+// ✅ METHOD IN UPDATE
 func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int64, error) {
 	// Get total count (only active)
 	var total int64

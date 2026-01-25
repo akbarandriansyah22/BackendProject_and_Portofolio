@@ -16,7 +16,7 @@ type CategoryService struct {
 }
 
 // NewCategoryService creates a new category service
-// ✅ FIX: Add productRepo parameter
+// FIX: Add productRepo parameter
 func NewCategoryService(categoryRepo *repository.CategoryRepository, productRepo *repository.ProductRepository) *CategoryService {
 	return &CategoryService{
 		categoryRepo: categoryRepo,
@@ -44,7 +44,7 @@ func (s *CategoryService) GetByID(id int) (*models.Category, error) {
 }
 
 // GetBySlug gets category by slug
-// ✅ ADD: Missing method
+// ADD: Missing method
 func (s *CategoryService) GetBySlug(slug string) (*models.Category, error) {
 	category, err := s.categoryRepo.GetBySlug(slug)
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *CategoryService) Delete(id int) error {
 }
 
 // ToggleStatus activates or deactivates a category
-// ✅ FIX: Use Update() instead of non-existent UpdateStatus()
+// FIX: Use Update() instead of non-existent UpdateStatus()
 func (s *CategoryService) ToggleStatus(id int, isActive bool) error {
 	// Get category
 	category, err := s.categoryRepo.GetByID(id)
@@ -172,7 +172,7 @@ func (s *CategoryService) ToggleStatus(id int, isActive bool) error {
 }
 
 // GetProductsByCategory gets products for a category
-// ✅ FIX: Use ProductRepository instead of non-existent CategoryRepository.GetProducts()
+// FIX: Use ProductRepository instead of non-existent CategoryRepository.GetProducts()
 func (s *CategoryService) GetProductsByCategory(categoryID, page, limit int) ([]models.Product, int64, error) {
 	// Check if category exists
 	_, err := s.categoryRepo.GetByID(categoryID)
@@ -192,7 +192,7 @@ func (s *CategoryService) GetProductsByCategory(categoryID, page, limit int) ([]
 }
 
 // GetSubCategories gets sub-categories of a category
-// ✅ FIX: Use correct method name GetSubCategories() instead of GetByParentID()
+// FIX: Use correct method name GetSubCategories() instead of GetByParentID()
 func (s *CategoryService) GetSubCategories(parentID int) ([]models.Category, error) {
 	categories, err := s.categoryRepo.GetSubCategories(parentID)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *CategoryService) GetSubCategories(parentID int) ([]models.Category, err
 }
 
 // GetParentCategories gets all parent categories (categories without parent)
-// ✅ ADD: Missing method
+// ADD: Missing method
 func (s *CategoryService) GetParentCategories() ([]models.Category, error) {
 	categories, err := s.categoryRepo.GetParentCategories()
 	if err != nil {
@@ -214,7 +214,7 @@ func (s *CategoryService) GetParentCategories() ([]models.Category, error) {
 }
 
 // GetCategoryHierarchy gets categories in hierarchical structure
-// ✅ ADD: Missing method
+// ADD: Missing method
 func (s *CategoryService) GetCategoryHierarchy() ([]models.Category, error) {
 	categories, err := s.categoryRepo.GetCategoryHierarchy()
 	if err != nil {
@@ -225,7 +225,7 @@ func (s *CategoryService) GetCategoryHierarchy() ([]models.Category, error) {
 }
 
 // Search searches categories by name
-// ✅ ADD: Missing method
+// ADD: Missing method
 func (s *CategoryService) Search(keyword string) ([]models.Category, error) {
 	if keyword == "" {
 		return nil, fmt.Errorf("search keyword is required")
@@ -240,7 +240,7 @@ func (s *CategoryService) Search(keyword string) ([]models.Category, error) {
 }
 
 // GetAllWithPagination gets all categories with pagination
-// ✅ ADD: Missing method
+// ADD: Missing method
 func (s *CategoryService) GetAllWithPagination(page, limit int) ([]models.Category, int64, error) {
 	if page < 1 {
 		page = 1
@@ -260,7 +260,7 @@ func (s *CategoryService) GetAllWithPagination(page, limit int) ([]models.Catego
 }
 
 // GetCategoryStats gets category statistics
-// ✅ FIX: Simple implementation without repository methods (calculate from GetAll)
+// FIX: Simple implementation without repository methods (calculate from GetAll)
 func (s *CategoryService) GetCategoryStats() (map[string]interface{}, error) {
 	// Get all categories (including inactive)
 	allCategories, err := s.categoryRepo.GetAllIncludeInactive()
