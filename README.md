@@ -132,8 +132,8 @@ This project demonstrates the ability to design non-HTTP applications while main
 
 For further discussion or project review:
 
-- GitHub: [https://github.com/](https://github.com/)<username>
-- LinkedIn: (optional)
+- GitHub: https://github.com/akbarandriansyah22
+- LinkedIn: https://www.linkedin.com/in/akbar-andriansyah-b3907322b/
 
 ---
 
