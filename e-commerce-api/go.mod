@@ -1,6 +1,6 @@
 module github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api
 
-go 1.25.6
+go 1.25.2
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.10
