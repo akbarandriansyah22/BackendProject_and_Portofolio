@@ -40,7 +40,7 @@ jobs:
           args: --timeout=5m
 
       - name: Run GoSec (SAST)
-        uses: securego/gosec@v2.22.0
+        uses: securego/gosec@v2.22.11
         with:
           args: -fmt sarif -out gosec.sarif ./e-commerce-api/...
       - name: Upload GoSec SARIF
