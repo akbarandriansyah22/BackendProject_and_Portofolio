@@ -5,6 +5,10 @@ on:
     branches: ["main"]
   pull_request:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,11 +17,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # =====================
+      # Go Toolchain
+      # =====================
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "e-commerce-api/go.mod"
-          check-latest: false
+          go-version: "1.25.2"
           cache: true
 
       # =====================
@@ -26,7 +32,7 @@ jobs:
       - name: Download dependencies
         run: |
           cd e-commerce-api
-          go mod tidy 
+          go mod tidy
           go mod download
           go mod verify
 
@@ -34,16 +40,16 @@ jobs:
       # Static Analysis
       # =====================
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.8.0
+          version: v2.7.2
           working-directory: e-commerce-api
           args: --timeout=5m
 
-      - name: Run GoSec (SAST)
+      - name: Run GoSec (SAST – best effort)
         run: |
           cd e-commerce-api
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
           gosec -fmt sarif -out ../gosec.sarif -no-fail ./...
         continue-on-error: true
 
@@ -54,18 +60,17 @@ jobs:
           sarif_file: gosec.sarif
 
       # =====================
-      # SCA
+      # SCA – Filesystem
       # =====================
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: fs
           scan-ref: e-commerce-api
-          severity: HIGH,CRITICAL
-          exit-code: 0
-          ignore-unfixed: true
           format: sarif
           output: trivy-fs.sarif
+          exit-code: 0
+          ignore-unfixed: true
 
       - name: Upload Trivy FS SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -82,14 +87,13 @@ jobs:
           docker build -t e-commerce-api:ci .
 
       - name: Run Trivy image scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: e-commerce-api:ci
-          severity: HIGH,CRITICAL
-          exit-code: 0
-          ignore-unfixed: true
           format: sarif
           output: trivy-image.sarif
+          exit-code: 0
+          ignore-unfixed: true
 
       - name: Upload Trivy Image SARIF
         uses: github/codeql-action/upload-sarif@v3
