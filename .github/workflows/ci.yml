@@ -1,4 +1,4 @@
-name: Go CI + SAST + SCA + Docker Scan
+name: Go CI + DevSecOps Pipeline
 
 on:
   push:
@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # =====================
+      # Checkout
+      # =====================
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -27,9 +30,9 @@ jobs:
           cache: true
 
       # =====================
-      # Dependencies
+      # Dependency Validation
       # =====================
-      - name: Download dependencies
+      - name: Download & verify dependencies
         run: |
           cd e-commerce-api
           go mod tidy
@@ -37,7 +40,14 @@ jobs:
           go mod verify
 
       # =====================
-      # Static Analysis
+      # Secret Scanning (A02, A05)
+      # =====================
+      - name: Run Gitleaks (secret scanning)
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+
+      # =====================
+      # Code Quality & SAST
       # =====================
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
@@ -46,11 +56,11 @@ jobs:
           working-directory: e-commerce-api
           args: --timeout=5m
 
-      - name: Run GoSec (SAST | best effort)
+      - name: Run GoSec (SAST)
         run: |
           cd e-commerce-api
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
-          gosec -fmt sarif -out ../gosec.sarif -no-fail ./...
+          gosec -fmt sarif -out ../gosec.sarif ./...
         continue-on-error: true
 
       - name: Upload GoSec SARIF
@@ -60,9 +70,9 @@ jobs:
           sarif_file: gosec.sarif
 
       # =====================
-      # SCA – Filesystem
+      # SCA – Filesystem (A06)
       # =====================
-      - name: Run Trivy filesystem scan
+      - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: fs
@@ -80,14 +90,14 @@ jobs:
           category: trivy-fs
 
       # =====================
-      # Docker
+      # Build & Scan Container
       # =====================
       - name: Build Docker image
         run: |
           cd e-commerce-api
           docker build -t e-commerce-api:ci .
 
-      - name: Run Trivy image scan
+      - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: e-commerce-api:ci
@@ -104,6 +114,23 @@ jobs:
           category: trivy-image
 
       # =====================
+      # SBOM (A08 – Supply Chain)
+      # =====================
+      - name: Generate SBOM
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: e-commerce-api
+          format: cyclonedx
+          output: sbom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+
+      # =====================
       # Test & Build
       # =====================
       - name: Run tests
@@ -117,7 +144,7 @@ jobs:
           cd e-commerce-api
           go build -v -o bin/ecommerce-api ./server/cmd/main.go
 
-      - name: Upload binary
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         if: success()
         with:
