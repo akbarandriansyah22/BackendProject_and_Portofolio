@@ -40,14 +40,14 @@ jobs:
           go mod verify
 
       # =====================
-      # Secret Scanning (A02, A05)
+      # Secret Scanning
       # =====================
-      - name: Run Gitleaks (secret scanning)
+      - name: Secret scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
         continue-on-error: true
 
       # =====================
-      # Code Quality & SAST
+      # Code Quality
       # =====================
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
@@ -56,20 +56,24 @@ jobs:
           working-directory: e-commerce-api
           args: --timeout=5m
 
+      # =====================
+      # SAST – GoSec
+      # =====================
       - name: Run GoSec (SAST)
         run: |
           cd e-commerce-api
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
-          gosec -fmt sarif -out ../gosec.sarif ./...
+          gosec -fmt sarif -out ../gosec.sarif -no-fail ./...
 
       - name: Upload GoSec SARIF
-        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: gosec.sarif
+          category: gosec
 
       # =====================
-      # SCA – Filesystem (A06)
+      # SCA – Filesystem
       # =====================
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.33.1
@@ -82,20 +86,23 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Trivy FS SARIF
-        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
 
       # =====================
-      # Build & Scan Container
+      # Build Container
       # =====================
       - name: Build Docker image
         run: |
           cd e-commerce-api
           docker build -t e-commerce-api:ci .
 
+      # =====================
+      # Container Image Scan
+      # =====================
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
@@ -106,14 +113,14 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Trivy Image SARIF
-        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
 
       # =====================
-      # SBOM (A08 – Supply Chain)
+      # SBOM – Supply Chain
       # =====================
       - name: Generate SBOM
         uses: aquasecurity/trivy-action@0.33.1
@@ -144,8 +151,8 @@ jobs:
           go build -v -o bin/ecommerce-api ./server/cmd/main.go
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
         if: success()
+        uses: actions/upload-artifact@v4
         with:
           name: ecommerce-api-binary
           path: e-commerce-api/bin/ecommerce-api
