@@ -42,9 +42,11 @@ jobs:
       # =====================
       # Secret Scanning
       # =====================
+      # SECURITY GATE: Fail on any secrets found in codebase
+      # Gitleaks detects: API keys, tokens, passwords, credentials
+      # Impact: Prevents credential leaks before they reach production
       - name: Secret scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
 
       # =====================
       # Code Quality
@@ -59,11 +61,15 @@ jobs:
       # =====================
       # SAST – GoSec
       # =====================
+      # SECURITY GATE: Fail on HIGH/CRITICAL code vulnerabilities
+      # GoSec scans: SQL injection, hardcoded secrets, insecure crypto, etc.
+      # Impact: Prevents vulnerable code patterns from merging
       - name: Run GoSec (SAST)
         run: |
           cd e-commerce-api
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
-          gosec -fmt sarif -out ../gosec.sarif -no-fail ./...
+          # Run with minimum severity MEDIUM; exit code 1 on violations
+          gosec -fmt sarif -out ../gosec.sarif -severity medium ./...
 
       - name: Upload GoSec SARIF
         if: always()
@@ -75,6 +81,9 @@ jobs:
       # =====================
       # SCA – Filesystem
       # =====================
+      # SECURITY GATE: Fail on HIGH/CRITICAL vulnerabilities in dependencies
+      # Trivy scans: Known CVEs in Go modules, lock files, manifests
+      # Impact: Prevents supply-chain attacks and outdated dependencies
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
@@ -82,7 +91,8 @@ jobs:
           scan-ref: e-commerce-api
           format: sarif
           output: trivy-fs.sarif
-          exit-code: 0
+          exit-code: 1
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
 
       - name: Upload Trivy FS SARIF
@@ -103,13 +113,17 @@ jobs:
       # =====================
       # Container Image Scan
       # =====================
+      # SECURITY GATE: Fail on HIGH/CRITICAL vulnerabilities in Docker image
+      # Trivy scans: Vulnerable OS packages (Alpine, Debian libs, etc.)
+      # Impact: Ensures production container doesn't have known exploits
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: e-commerce-api:ci
           format: sarif
           output: trivy-image.sarif
-          exit-code: 0
+          exit-code: 1
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
 
       - name: Upload Trivy Image SARIF
