@@ -1,4 +1,4 @@
-package utils
+package security
 
 import (
 	"fmt"
@@ -45,7 +45,7 @@ func GenerateToken(userID int, email string, roleID int, fullName string, secret
 			IssuedAt:  jwt.NewNumericDate(time.Now()),     // Token issued time
 			NotBefore: jwt.NewNumericDate(time.Now()),     // Token valid after
 			Issuer:    "e-commerce-api",                   // Issuer name
-			Subject:   email,                               // Subject (email)
+			Subject:   email,                              // Subject (email)
 		},
 	}
 
@@ -86,14 +86,12 @@ func GenerateRefreshToken(userID int, email string, roleID int, fullName string,
 func ParseToken(tokenString string, secret string) (*JWTClaims, error) {
 	// Parse token
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-	// Validate signing method 
-	if token.Method != jwt.SigningMethodHS256 {
-		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-	}
-
-	return []byte(secret), nil
-})
-
+		// Validate signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
 
 	// Check for parsing errors
 	if err != nil {
@@ -159,12 +157,12 @@ func ExtractRoleID(tokenString string, secret string) (int, error) {
 // Fungsi untuk cek apakah token sudah expired
 func IsTokenExpired(tokenString string, secret string) bool {
 	claims, err := ParseToken(tokenString, secret)
-	if err != nil || claims.ExpiresAt == nil { 
+	if err != nil {
 		return true // If can't parse, consider expired
 	}
 
 	// Check if token is expired
-	return claims.ExpiresAt.Before(time.Now())
+	return claims.ExpiresAt.Time.Before(time.Now())
 }
 
 // GetTokenExpiration gets token expiration time
@@ -174,11 +172,6 @@ func GetTokenExpiration(tokenString string, secret string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
-
-	if claims.ExpiresAt == nil {
-		return time.Time{}, fmt.Errorf("token has no expiration")
-	}
-
 	return claims.ExpiresAt.Time, nil
 }
 
@@ -262,27 +255,10 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 		return nil, err
 	}
 
-	var (
-		issuedAt  time.Time
-		expiresAt time.Time
-		remaining time.Duration
-		isExpired bool
-	)
-
-	if claims.IssuedAt != nil {
-		issuedAt = claims.IssuedAt.Time
-	}
-
-	if claims.ExpiresAt != nil {
-		expiresAt = claims.ExpiresAt.Time
-		isExpired = expiresAt.Before(time.Now())
-
-		remaining = time.Until(expiresAt)
-		if remaining < 0 {
-			remaining = 0
-		}
-	} else {
-		isExpired = true
+	isExpired := claims.ExpiresAt.Time.Before(time.Now())
+	remaining := time.Until(claims.ExpiresAt.Time)
+	if remaining < 0 {
+		remaining = 0
 	}
 
 	info := map[string]interface{}{
@@ -290,8 +266,8 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 		"email":      claims.Email,
 		"role_id":    claims.RoleID,
 		"full_name":  claims.FullName,
-		"issued_at":  issuedAt,
-		"expires_at": expiresAt,
+		"issued_at":  claims.IssuedAt.Time,
+		"expires_at": claims.ExpiresAt.Time,
 		"issuer":     claims.Issuer,
 		"is_expired": isExpired,
 		"remaining":  remaining.String(),
@@ -300,16 +276,15 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 	return info, nil
 }
 
-
 // ============================================
 // CONSTANTS
 // ============================================
 
 const (
 	// Token expiration times (in hours)
-	AccessTokenExpiry  = 24      // 24 hours
-	RefreshTokenExpiry = 24 * 7  // 7 days
-	
+	AccessTokenExpiry  = 24     // 24 hours
+	RefreshTokenExpiry = 24 * 7 // 7 days
+
 	// Token types
 	TokenTypeAccess  = "access"
 	TokenTypeRefresh = "refresh"

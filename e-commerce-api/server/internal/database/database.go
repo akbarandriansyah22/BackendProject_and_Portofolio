@@ -18,6 +18,14 @@ type Config struct {
 	DBName   string
 	SSLMode  string
 }
+type DatabaseConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
+}
 
 // DB holds the database connection pool
 var DB *sql.DB
@@ -42,9 +50,9 @@ func Connect(config Config) (*sql.DB, error) {
 	}
 
 	// Configure connection pool
-	db.SetMaxOpenConns(25)                 // Maximum number of open connections
-	db.SetMaxIdleConns(5)                  // Maximum number of idle connections
-	db.SetConnMaxLifetime(5 * time.Minute) // Maximum lifetime of a connection
+	db.SetMaxOpenConns(25)                  // Maximum number of open connections
+	db.SetMaxIdleConns(5)                   // Maximum number of idle connections
+	db.SetConnMaxLifetime(5 * time.Minute)  // Maximum lifetime of a connection
 	db.SetConnMaxIdleTime(10 * time.Minute) // Maximum idle time of a connection
 
 	// Test the connection
@@ -128,7 +136,7 @@ func InitDB(config Config, maxRetries int) (*sql.DB, error) {
 		}
 
 		log.Printf("⚠️  Failed to connect to database (attempt %d/%d): %v", i+1, maxRetries, err)
-		
+
 		if i < maxRetries-1 {
 			waitTime := time.Duration(i+1) * 2 * time.Second
 			log.Printf("⏳ Retrying in %v...", waitTime)
@@ -210,4 +218,11 @@ func WaitForDB(db *sql.DB, timeout time.Duration) error {
 			log.Println("⏳ Waiting for database to be ready...")
 		}
 	}
+}
+
+func (d DatabaseConfig) DSN() string {
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		d.Host, d.Port, d.User, d.Password, d.Name, d.SSLMode,
+	)
 }

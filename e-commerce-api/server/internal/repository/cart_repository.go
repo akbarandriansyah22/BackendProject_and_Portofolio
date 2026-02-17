@@ -5,7 +5,6 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
@@ -47,10 +46,10 @@ func (r *CartRepository) GetOrCreateCart(userID int) (*models.Cart, error) {
 // GetByID retrieves a cart by ID
 func (r *CartRepository) GetByID(id int) (*models.Cart, error) {
 	query := `SELECT id, user_id, created_at, updated_at FROM carts WHERE id = $1`
-	
+
 	cart := &models.Cart{}
 	err := r.db.QueryRow(query, id).Scan(&cart.ID, &cart.UserID, &cart.CreatedAt, &cart.UpdatedAt)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("cart not found")
 	}
@@ -61,10 +60,10 @@ func (r *CartRepository) GetByID(id int) (*models.Cart, error) {
 // GetByUserID retrieves a cart by user ID
 func (r *CartRepository) GetByUserID(userID int) (*models.Cart, error) {
 	query := `SELECT id, user_id, created_at, updated_at FROM carts WHERE user_id = $1`
-	
+
 	cart := &models.Cart{}
 	err := r.db.QueryRow(query, userID).Scan(&cart.ID, &cart.UserID, &cart.CreatedAt, &cart.UpdatedAt)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("cart not found")
 	}
@@ -119,11 +118,7 @@ func (r *CartRepository) GetCartItems(cartID int) ([]models.CartItemWithProduct,
 	if err != nil {
 		return nil, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	items := []models.CartItemWithProduct{}
 	for rows.Next() {

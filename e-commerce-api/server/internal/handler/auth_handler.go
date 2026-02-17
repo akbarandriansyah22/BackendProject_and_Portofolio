@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/middleware"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/observability"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/service"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/utils"
 
@@ -12,12 +13,17 @@ import (
 // AuthHandler handles authentication-related requests
 type AuthHandler struct {
 	authService *service.AuthService
+	logger      observability.Logger
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(
+	authService *service.AuthService,
+	logger observability.Logger,
+) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
+		logger:      logger,
 	}
 }
 
@@ -27,12 +33,12 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	// 1. Parse request body
 	var req models.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("Register: Invalid request body - %v", err)
+		h.logger.Warn("Register: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
 	// 2. Call service (all business logic in service)
-	response, err := h.authService.Register(&req)
+	response, err := h.authService.Register(c.Context(), &req)
 	if err != nil {
 		return h.handleAuthError(c, err)
 	}
@@ -47,12 +53,12 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// 1. Parse request body
 	var req models.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("Login: Invalid request body - %v", err)
+		h.logger.Warn("Login: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
 	// 2. Call service (all business logic in service)
-	response, err := h.authService.Login(&req)
+	response, err := h.authService.Login(c.Context(), &req)
 	if err != nil {
 		return h.handleAuthError(c, err)
 	}
@@ -72,7 +78,7 @@ func (h *AuthHandler) GetProfile(c *fiber.Ctx) error {
 	}
 
 	// 2. Call service
-	profile, err := h.authService.GetProfile(userID)
+	profile, err := h.authService.GetProfile(c.Context(), userID)
 	if err != nil {
 		return h.handleAuthError(c, err)
 	}
@@ -97,12 +103,12 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		Email    string `json:"email"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("UpdateProfile: Invalid request body - %v", err)
+		h.logger.Warn("UpdateProfile: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
 	// 3. Call service (all business logic in service)
-	profile, err := h.authService.UpdateProfile(userID, req.FullName, req.Email)
+	profile, err := h.authService.UpdateProfile(c.Context(), userID, req.FullName, req.Email)
 	if err != nil {
 		return h.handleAuthError(c, err)
 	}
@@ -127,12 +133,12 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 		NewPassword string `json:"new_password"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("ChangePassword: Invalid request body - %v", err)
+		h.logger.Warn("ChangePassword: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
 	// 3. Call service (all business logic in service)
-	if err := h.authService.ChangePassword(userID, req.OldPassword, req.NewPassword); err != nil {
+	if err := h.authService.ChangePassword(c.Context(), userID, req.OldPassword, req.NewPassword); err != nil {
 		return h.handleAuthError(c, err)
 	}
 
@@ -181,7 +187,7 @@ func (h *AuthHandler) handleAuthError(c *fiber.Ctx, err error) error {
 
 	// Internal Server Error (500) - default
 	default:
-		utils.Error("AuthHandler: Unhandled error - %v", err)
+		h.logger.Error("AuthHandler: Unhandled error - %v", err)
 		return utils.InternalServerErrorResponse(c, "An error occurred")
 	}
 }

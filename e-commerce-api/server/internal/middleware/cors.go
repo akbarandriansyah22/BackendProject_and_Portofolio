@@ -13,19 +13,19 @@ func CORS() fiber.Handler {
 		// Allow all origins (wildcard)
 		// ⚠️ DEVELOPMENT ONLY! Ganti di production!
 		AllowOrigins: "*",
-		
+
 		// Allow common HTTP methods
 		AllowMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-		
+
 		// Allow common headers
 		AllowHeaders: "Origin,Content-Type,Accept,Authorization,X-Requested-With",
-		
+
 		// Expose headers to frontend
 		ExposeHeaders: "Content-Length,Content-Type",
-		
+
 		// Allow credentials (cookies, authorization headers)
 		AllowCredentials: false, // Set false jika AllowOrigins = "*"
-		
+
 		// Max age for preflight request cache (in seconds)
 		MaxAge: 3600, // 1 hour
 	})
@@ -46,19 +46,19 @@ func CORSWithOrigins(origins []string) fiber.Handler {
 	return cors.New(cors.Config{
 		// Allow specific origins only
 		AllowOrigins: allowedOrigins,
-		
+
 		// Allow common HTTP methods
 		AllowMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-		
+
 		// Allow common headers + custom headers
 		AllowHeaders: "Origin,Content-Type,Accept,Authorization,X-Requested-With,X-CSRF-Token",
-		
+
 		// Expose headers
 		ExposeHeaders: "Content-Length,Content-Type,X-Total-Count",
-		
+
 		// Allow credentials (required for cookies & auth)
 		AllowCredentials: true,
-		
+
 		// Max age for preflight cache
 		MaxAge: 86400, // 24 hours
 	})
@@ -79,19 +79,19 @@ func CORSProduction(allowedOrigins []string) fiber.Handler {
 	return cors.New(cors.Config{
 		// Strict: Only allow whitelisted origins
 		AllowOrigins: origins,
-		
+
 		// Only allow necessary methods
 		AllowMethods: "GET,POST,PUT,DELETE,PATCH",
-		
+
 		// Only allow necessary headers
 		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
-		
+
 		// Expose necessary headers
 		ExposeHeaders: "Content-Length,Content-Type",
-		
+
 		// Allow credentials
 		AllowCredentials: true,
-		
+
 		// Cache preflight for longer
 		MaxAge: 86400, // 24 hours
 	})
@@ -103,19 +103,19 @@ func CORSDevelopment() fiber.Handler {
 	return cors.New(cors.Config{
 		// Allow all origins in development
 		AllowOrigins: "*",
-		
+
 		// Allow all methods
 		AllowMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD",
-		
+
 		// Allow all headers
 		AllowHeaders: "*",
-		
+
 		// Expose all headers
 		ExposeHeaders: "*",
-		
+
 		// No credentials with wildcard origin
 		AllowCredentials: false,
-		
+
 		// Short cache for development (easier testing)
 		MaxAge: 300, // 5 minutes
 	})
@@ -191,7 +191,7 @@ func GetAllowedOrigins(originsString string) []string {
 	// Parse comma-separated string
 	origins := []string{}
 	current := ""
-	
+
 	for _, char := range originsString {
 		if char == ',' {
 			if current != "" {
@@ -202,7 +202,7 @@ func GetAllowedOrigins(originsString string) []string {
 			current += string(char)
 		}
 	}
-	
+
 	if current != "" {
 		origins = append(origins, current)
 	}

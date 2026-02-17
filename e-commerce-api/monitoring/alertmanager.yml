@@ -1,0 +1,116 @@
+# Alertmanager Configuration
+# Routes alerts to configured receivers and manages their lifecycle
+
+global:
+  resolve_timeout: 5m
+  # SMTP Configuration for Email Alerts (optional)
+  # smtp_smarthost: 'smtp.example.com:587'
+  # smtp_auth_username: 'alerts@example.com'
+  # smtp_auth_password: 'password'
+  # smtp_from: 'alerts@example.com'
+
+# Template files for alert messages
+templates: []
+
+# Alert routing configuration
+route:
+  # Default receiver
+  receiver: "default"
+
+  # How long to wait before grouping alerts
+  group_wait: 10s
+
+  # How long to wait before sending a group update
+  group_interval: 10s
+
+  # How long to wait before sending a repeat
+  repeat_interval: 12h
+
+  # Routes for specific alert types
+  routes:
+    # Critical alerts - immediate escalation
+    - match:
+        severity: critical
+      receiver: "critical"
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 4h
+
+    # Warning alerts - standard grouping
+    - match:
+        severity: warning
+      receiver: "warning"
+      group_wait: 30s
+      group_interval: 10m
+      repeat_interval: 6h
+
+    # Info alerts - less frequent
+    - match:
+        severity: info
+      receiver: "info"
+      group_wait: 5m
+      group_interval: 30m
+      repeat_interval: 24h
+
+# Alert receivers (destinations)
+receivers:
+  # Default receiver (can be webhook, email, Slack, etc.)
+  - name: "default"
+    # Email configuration (uncomment and configure as needed)
+    # email_configs:
+    #   - to: 'devops-team@example.com'
+    #     from: 'alerts@example.com'
+    #     smarthost: 'smtp.example.com:587'
+    #     auth_username: 'alerts@example.com'
+    #     auth_password: 'password'
+    #     headers:
+    #       Subject: '[{{ .GroupLabels.alertname }}] Alert'
+
+    # Webhook configuration (for integration with custom systems)
+    # webhook_configs:
+    #   - url: 'http://webhook.example.com/alerts'
+    #     send_resolved: true
+
+  # Critical alerts - immediate notification
+  - name: "critical"
+    # Example Slack webhook (configure your own)
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
+    #     channel: '#critical-alerts'
+    #     title: 'CRITICAL: {{ .GroupLabels.alertname }}'
+    #     text: '{{ .CommonAnnotations.description }}'
+    #     color: 'danger'
+
+    # Email configuration for critical alerts
+    # email_configs:
+    #   - to: 'oncall@example.com'
+    #     headers:
+    #       Subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+
+  # Warning alerts
+  - name: "warning"
+    # webhook_configs:
+    #   - url: 'http://webhook.example.com/alerts'
+    #     send_resolved: true
+
+  # Info alerts
+  - name: "info"
+    # webhook_configs:
+    #   - url: 'http://webhook.example.com/alerts'
+    #     send_resolved: true
+
+# Grouping of alerts
+inhibit_rules:
+  # Don't send warning if critical is already firing
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "path"]
+
+  # Don't send info if warning is already firing
+  - source_match:
+      severity: "warning"
+    target_match:
+      severity: "info"
+    equal: ["alertname", "path"]

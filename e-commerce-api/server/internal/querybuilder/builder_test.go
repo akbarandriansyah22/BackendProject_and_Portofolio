@@ -265,8 +265,8 @@ func TestWhereClause_AddCondition(t *testing.T) {
 
 func TestWhereClause_Build(t *testing.T) {
 	tests := []struct {
-		name              string
-		conditions        []struct {
+		name       string
+		conditions []struct {
 			condition string
 			args      []interface{}
 		}
@@ -274,14 +274,20 @@ func TestWhereClause_Build(t *testing.T) {
 		expectedArgsCount int
 	}{
 		{
-			name:              "Empty where clause",
-			conditions:        []struct{ condition string; args []interface{} }{},
+			name: "Empty where clause",
+			conditions: []struct {
+				condition string
+				args      []interface{}
+			}{},
 			expectedClause:    "",
 			expectedArgsCount: 0,
 		},
 		{
 			name: "Single condition",
-			conditions: []struct{ condition string; args []interface{} }{
+			conditions: []struct {
+				condition string
+				args      []interface{}
+			}{
 				{"name = $1", []interface{}{"test"}},
 			},
 			expectedClause:    "WHERE name = $1",
@@ -289,7 +295,10 @@ func TestWhereClause_Build(t *testing.T) {
 		},
 		{
 			name: "Multiple conditions",
-			conditions: []struct{ condition string; args []interface{} }{
+			conditions: []struct {
+				condition string
+				args      []interface{}
+			}{
 				{"name ILIKE $1", []interface{}{"%test%"}},
 				{"price > $2", []interface{}{100.0}},
 				{"stock >= $3", []interface{}{10}},

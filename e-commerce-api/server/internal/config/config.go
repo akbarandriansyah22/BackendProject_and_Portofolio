@@ -28,6 +28,11 @@ type DatabaseConfig struct {
 	SSLMode  string
 }
 
+// DSN returns the PostgreSQL connection string
+func (d *DatabaseConfig) DSN() string {
+	return "postgres://" + d.User + ":" + d.Password + "@" + d.Host + ":" + d.Port + "/" + d.DBName + "?sslmode=" + d.SSLMode
+}
+
 // ServerConfig holds server configuration
 type ServerConfig struct {
 	Port         string
@@ -143,7 +148,7 @@ func (c *Config) GetServerAddress() string {
 
 // PrintConfig prints the current configuration (without sensitive data)
 func (c *Config) PrintConfig() {
-	log.Println("📋 Application Configuration:")
+	log.Println(" Application Configuration:")
 	log.Printf("  App Name: %s", c.App.Name)
 	log.Printf("  Version: %s", c.App.Version)
 	log.Printf("  Environment: %s", c.Server.Environment)
@@ -180,8 +185,6 @@ func getIntEnv(key string, defaultValue int) int {
 func getDurationEnv(key string, defaultValue int) time.Duration {
 	return time.Duration(getIntEnv(key, defaultValue))
 }
-
-
 
 // getSliceEnv gets slice environment variable with default value
 func getSliceEnv(key string, defaultValue []string) []string {

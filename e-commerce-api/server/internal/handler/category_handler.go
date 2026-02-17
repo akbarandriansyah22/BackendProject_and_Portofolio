@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
+	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/observability"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/service"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/utils"
 
@@ -13,12 +14,17 @@ import (
 // CategoryHandler handles category-related requests
 type CategoryHandler struct {
 	categoryService *service.CategoryService
+	logger          observability.Logger
 }
 
 // NewCategoryHandler creates a new category handler
-func NewCategoryHandler(categoryService *service.CategoryService) *CategoryHandler {
+func NewCategoryHandler(
+	categoryService *service.CategoryService,
+	logger observability.Logger,
+) *CategoryHandler {
 	return &CategoryHandler{
 		categoryService: categoryService,
+		logger:          logger,
 	}
 }
 
@@ -26,13 +32,19 @@ func NewCategoryHandler(categoryService *service.CategoryService) *CategoryHandl
 // PUBLIC ENDPOINTS (No Auth Required)
 // ============================================
 
+// ListCategories handles getting all categories
+// GET /api/categories
+func (h *CategoryHandler) ListCategories(c *fiber.Ctx) error {
+	return h.GetAllCategories(c)
+}
+
 // GetAllCategories handles getting all categories
 // GET /api/categories
 func (h *CategoryHandler) GetAllCategories(c *fiber.Ctx) error {
 	// Get all categories
 	categories, err := h.categoryService.GetAll()
 	if err != nil {
-		utils.Error("CategoryHandler.GetAllCategories: Failed - Error=%v", err)
+		h.logger.Error("CategoryHandler.GetAllCategories: Failed - Error=%v", err)
 		return utils.InternalServerErrorResponse(c, "Failed to get categories")
 	}
 
@@ -54,7 +66,7 @@ func (h *CategoryHandler) GetCategoryByID(c *fiber.Ctx) error {
 		if err.Error() == "category not found" {
 			return utils.NotFoundResponse(c, "Category not found")
 		}
-		utils.Error("CategoryHandler.GetCategoryByID: Failed - CategoryID=%d, Error=%v", id, err)
+		h.logger.Error("CategoryHandler.GetCategoryByID: Failed - CategoryID=%d, Error=%v", id, err)
 		return utils.InternalServerErrorResponse(c, "Failed to get category")
 	}
 
@@ -79,11 +91,11 @@ func (h *CategoryHandler) GetProductsByCategory(c *fiber.Ctx) error {
 		if err.Error() == "category not found" {
 			return utils.NotFoundResponse(c, "Category not found")
 		}
-		utils.Error("CategoryHandler.GetProductsByCategory: Failed - CategoryID=%d, Error=%v", id, err)
+		h.logger.Error("CategoryHandler.GetProductsByCategory: Failed - CategoryID=%d, Error=%v", id, err)
 		return utils.InternalServerErrorResponse(c, "Failed to get products")
 	}
 
-	return utils.PaginatedSuccessResponse(c, "Products retrieved successfully", products, page, limit, total)
+	return utils.PaginatedSuccessResponse(c, "Products retrieved successfully", products, page, limit, int64(total))
 }
 
 // GetSubCategories handles getting subcategories of a parent category
@@ -98,7 +110,7 @@ func (h *CategoryHandler) GetSubCategories(c *fiber.Ctx) error {
 	// Get subcategories
 	categories, err := h.categoryService.GetSubCategories(id)
 	if err != nil {
-		utils.Error("CategoryHandler.GetSubCategories: Failed - ParentID=%d, Error=%v", id, err)
+		h.logger.Error("CategoryHandler.GetSubCategories: Failed - ParentID=%d, Error=%v", id, err)
 		return utils.InternalServerErrorResponse(c, "Failed to get subcategories")
 	}
 
@@ -116,7 +128,7 @@ func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 	// Parse request
 	var req models.CreateCategoryRequest
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("CategoryHandler.CreateCategory: Invalid request body - %v", err)
+		h.logger.Warn("CategoryHandler.CreateCategory: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
@@ -148,11 +160,11 @@ func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 		if errMsg == "category slug already exists" {
 			return utils.ConflictResponse(c, errMsg)
 		}
-		utils.Error("CategoryHandler.CreateCategory: Failed - Error=%v", err)
+		h.logger.Error("CategoryHandler.CreateCategory: Failed - Error=%v", err)
 		return utils.InternalServerErrorResponse(c, "Failed to create category")
 	}
 
-	utils.Info("Category created: ID=%d, Name=%s", category.ID, category.Name)
+	h.logger.Info("Category created: ID=%d, Name=%s", category.ID, category.Name)
 
 	return utils.CreatedResponse(c, "Category created successfully", category)
 }
@@ -170,7 +182,7 @@ func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	// Parse request body
 	var req models.UpdateCategoryRequest
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("CategoryHandler.UpdateCategory: Invalid request body - %v", err)
+		h.logger.Warn("CategoryHandler.UpdateCategory: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
@@ -184,11 +196,11 @@ func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 		if errMsg == "category slug already exists" {
 			return utils.ConflictResponse(c, errMsg)
 		}
-		utils.Error("CategoryHandler.UpdateCategory: Failed - CategoryID=%d, Error=%v", id, err)
+		h.logger.Error("CategoryHandler.UpdateCategory: Failed - CategoryID=%d, Error=%v", id, err)
 		return utils.InternalServerErrorResponse(c, "Failed to update category")
 	}
 
-	utils.Info("Category updated: ID=%d, Name=%s", category.ID, category.Name)
+	h.logger.Info("Category updated: ID=%d, Name=%s", category.ID, category.Name)
 
 	return utils.SuccessResponse(c, "Category updated successfully", category)
 }
@@ -209,15 +221,15 @@ func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 		if errMsg == "category not found" {
 			return utils.NotFoundResponse(c, "Category not found")
 		}
-		if errMsg == "cannot delete category with subcategories" || 
-		   errMsg == "cannot delete category with products" {
+		if errMsg == "cannot delete category with subcategories" ||
+			errMsg == "cannot delete category with products" {
 			return utils.BadRequestResponse(c, errMsg)
 		}
-		utils.Error("CategoryHandler.DeleteCategory: Failed - CategoryID=%d, Error=%v", id, err)
+		h.logger.Error("CategoryHandler.DeleteCategory: Failed - CategoryID=%d, Error=%v", id, err)
 		return utils.InternalServerErrorResponse(c, "Failed to delete category")
 	}
 
-	utils.Info("Category deleted: ID=%d", id)
+	h.logger.Info("Category deleted: ID=%d", id)
 
 	return utils.SuccessMessage(c, "Category deleted successfully")
 }
@@ -246,7 +258,7 @@ func (h *CategoryHandler) ToggleCategoryStatus(c *fiber.Ctx) error {
 		if errMsg == "category not found" {
 			return utils.NotFoundResponse(c, "Category not found")
 		}
-		utils.Error("CategoryHandler.ToggleCategoryStatus: Failed - CategoryID=%d, Error=%v", id, err)
+		h.logger.Error("CategoryHandler.ToggleCategoryStatus: Failed - CategoryID=%d, Error=%v", id, err)
 		return utils.InternalServerErrorResponse(c, "Failed to update category status")
 	}
 
@@ -256,7 +268,7 @@ func (h *CategoryHandler) ToggleCategoryStatus(c *fiber.Ctx) error {
 		status = "activated"
 	}
 
-	utils.Info("Category status toggled: ID=%d, IsActive=%v", id, req.IsActive)
+	h.logger.Info("Category status toggled: ID=%d, IsActive=%v", id, req.IsActive)
 
 	return utils.SuccessMessage(c, "Category "+status+" successfully")
 }
@@ -268,7 +280,7 @@ func (h *CategoryHandler) GetCategoryStats(c *fiber.Ctx) error {
 	// Get statistics
 	stats, err := h.categoryService.GetCategoryStats()
 	if err != nil {
-		utils.Error("CategoryHandler.GetCategoryStats: Failed - Error=%v", err)
+		h.logger.Error("CategoryHandler.GetCategoryStats: Failed - Error=%v", err)
 		return utils.InternalServerErrorResponse(c, "Failed to get category statistics")
 	}
 

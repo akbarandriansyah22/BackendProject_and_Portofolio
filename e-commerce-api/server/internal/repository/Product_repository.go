@@ -2,10 +2,9 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"log"
-	"strings"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/querybuilder"
@@ -26,14 +25,15 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 // Create creates a new product
-func (r *ProductRepository) Create(product *models.Product) error {
+func (r *ProductRepository) Create(ctx context.Context, product *models.Product) error {
 	query := `
 		INSERT INTO products (name, slug, description, price, stock, sku, image_url, is_active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
 	`
 
-	err := r.db.QueryRow(
+	err := r.db.QueryRowContext(
+		ctx,
 		query,
 		product.Name,
 		product.Slug,
@@ -49,7 +49,7 @@ func (r *ProductRepository) Create(product *models.Product) error {
 }
 
 // GetByID retrieves a product by ID
-func (r *ProductRepository) GetByID(id int) (*models.Product, error) {
+func (r *ProductRepository) GetByID(ctx context.Context, id int) (*models.Product, error) {
 	query := `
 		SELECT id, name, slug, description, price, stock, sku, image_url, 
 		       is_active, created_at, updated_at
@@ -58,7 +58,7 @@ func (r *ProductRepository) GetByID(id int) (*models.Product, error) {
 	`
 
 	product := &models.Product{}
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&product.ID,
 		&product.Name,
 		&product.Slug,
@@ -80,7 +80,7 @@ func (r *ProductRepository) GetByID(id int) (*models.Product, error) {
 }
 
 // GetBySlug retrieves a product by slug
-func (r *ProductRepository) GetBySlug(slug string) (*models.Product, error) {
+func (r *ProductRepository) GetBySlug(ctx context.Context, slug string) (*models.Product, error) {
 	query := `
 		SELECT id, name, slug, description, price, stock, sku, image_url, 
 		       is_active, created_at, updated_at
@@ -89,7 +89,7 @@ func (r *ProductRepository) GetBySlug(slug string) (*models.Product, error) {
 	`
 
 	product := &models.Product{}
-	err := r.db.QueryRow(query, slug).Scan(
+	err := r.db.QueryRowContext(ctx, query, slug).Scan(
 		&product.ID,
 		&product.Name,
 		&product.Slug,
@@ -132,11 +132,7 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -163,7 +159,7 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 }
 
 // GetActive retrieves only active products with pagination
-// ✅ METHOD IN UPDATE
+// ✅ METHOD INI DITAMBAHKAN!
 func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int64, error) {
 	// Get total count (only active)
 	var total int64
@@ -186,15 +182,62 @@ func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int6
 	if err != nil {
 		return nil, 0, err
 	}
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
 		var p models.Product
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.Slug,
+			&p.Description,
+			&p.Price,
+			&p.Stock,
+			&p.SKU,
+			&p.ImageURL,
+			&p.IsActive,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		products = append(products, p)
+	}
+
+	return products, total, nil
+}
+
+// List retrieves products with filter and pagination
+func (r *ProductRepository) List(ctx context.Context, filter *models.ProductFilter) ([]*models.Product, int, error) {
+	offset := (filter.Page - 1) * filter.Limit
+
+	// Get total count
+	var total int
+	countQuery := `SELECT COUNT(*) FROM products WHERE is_active = true`
+	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Get products
+	query := `
+		SELECT id, name, slug, description, price, stock, sku, image_url, 
+		       is_active, created_at, updated_at
+		FROM products
+		WHERE is_active = true
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, filter.Limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	products := []*models.Product{}
+	for rows.Next() {
+		p := &models.Product{}
 		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
@@ -245,11 +288,7 @@ func (r *ProductRepository) GetByCategory(categoryID int, limit, offset int) ([]
 	if err != nil {
 		return nil, 0, err
 	}
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -276,7 +315,7 @@ func (r *ProductRepository) GetByCategory(categoryID int, limit, offset int) ([]
 }
 
 // Update updates a product
-func (r *ProductRepository) Update(product *models.Product) error {
+func (r *ProductRepository) Update(ctx context.Context, product *models.Product) error {
 	query := `
 		UPDATE products
 		SET name = $1, slug = $2, description = $3, price = $4, stock = $5, 
@@ -285,7 +324,8 @@ func (r *ProductRepository) Update(product *models.Product) error {
 		RETURNING updated_at
 	`
 
-	return r.db.QueryRow(
+	return r.db.QueryRowContext(
+		ctx,
 		query,
 		product.Name,
 		product.Slug,
@@ -300,14 +340,14 @@ func (r *ProductRepository) Update(product *models.Product) error {
 }
 
 // Delete deletes a product (soft delete - set is_active to false)
-func (r *ProductRepository) Delete(id int) error {
+func (r *ProductRepository) Delete(ctx context.Context, id int) error {
 	query := `
 		UPDATE products
 		SET is_active = false, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
 
-	result, err := r.db.Exec(query, id)
+	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
@@ -346,14 +386,14 @@ func (r *ProductRepository) HardDelete(id int) error {
 }
 
 // UpdateStock updates product stock (direct set)
-func (r *ProductRepository) UpdateStock(id int, newStock int) error {
+func (r *ProductRepository) UpdateStock(ctx context.Context, productID, quantity int) error {
 	query := `
 		UPDATE products
 		SET stock = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 
-	result, err := r.db.Exec(query, newStock, id)
+	result, err := r.db.ExecContext(ctx, query, quantity, productID)
 	if err != nil {
 		return err
 	}
@@ -371,14 +411,14 @@ func (r *ProductRepository) UpdateStock(id int, newStock int) error {
 }
 
 // DecrementStock decrements product stock (for checkout)
-func (r *ProductRepository) DecrementStock(id int, quantity int) error {
+func (r *ProductRepository) DecrementStock(ctx context.Context, productID, quantity int) error {
 	query := `
 		UPDATE products
 		SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND stock >= $1
 	`
 
-	result, err := r.db.Exec(query, quantity, id)
+	result, err := r.db.ExecContext(ctx, query, quantity, productID)
 	if err != nil {
 		return err
 	}
@@ -396,14 +436,14 @@ func (r *ProductRepository) DecrementStock(id int, quantity int) error {
 }
 
 // IncrementStock increments product stock (for cancel/return)
-func (r *ProductRepository) IncrementStock(id int, quantity int) error {
+func (r *ProductRepository) IncrementStock(ctx context.Context, productID, quantity int) error {
 	query := `
 		UPDATE products
 		SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
 	`
 
-	result, err := r.db.Exec(query, quantity, id)
+	result, err := r.db.ExecContext(ctx, query, quantity, productID)
 	if err != nil {
 		return err
 	}
@@ -421,17 +461,18 @@ func (r *ProductRepository) IncrementStock(id int, quantity int) error {
 }
 
 // Search searches products by name or description
-func (r *ProductRepository) Search(keyword string, limit, offset int) ([]models.Product, int64, error) {
+func (r *ProductRepository) Search(ctx context.Context, keyword string, page, limit int) ([]*models.Product, int, error) {
 	searchPattern := "%" + keyword + "%"
+	offset := (page - 1) * limit
 
 	// Get total count
-	var total int64
+	var total int
 	countQuery := `
 		SELECT COUNT(*)
 		FROM products
 		WHERE (name ILIKE $1 OR description ILIKE $1) AND is_active = true
 	`
-	if err := r.db.QueryRow(countQuery, searchPattern).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, countQuery, searchPattern).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -445,19 +486,15 @@ func (r *ProductRepository) Search(keyword string, limit, offset int) ([]models.
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.Query(query, searchPattern, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, searchPattern, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
-	products := []models.Product{}
+	products := []*models.Product{}
 	for rows.Next() {
-		var p models.Product
+		p := &models.Product{}
 		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
@@ -506,11 +543,7 @@ func (r *ProductRepository) GetByPriceRange(minPrice, maxPrice float64, limit, o
 	if err != nil {
 		return nil, 0, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -551,11 +584,7 @@ func (r *ProductRepository) GetLowStock(threshold int, limit int) ([]models.Prod
 	if err != nil {
 		return nil, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -604,11 +633,7 @@ func (r *ProductRepository) GetOutOfStock(limit, offset int) ([]models.Product, 
 	if err != nil {
 		return nil, 0, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -686,6 +711,7 @@ func (r *ProductRepository) CountByCategory(categoryID int) (int64, error) {
 	err := r.db.QueryRow(query, categoryID).Scan(&count)
 	return count, err
 }
+
 // GetAllWithFilters retrieves products with dynamic filters
 // UPDATED: Now uses query builder to prevent SQL injection
 func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, limit, offset int) ([]models.Product, int64, error) {
@@ -737,22 +763,21 @@ func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, li
 	//  Use query builder for ORDER BY (prevents SQL injection)
 	sortBy := ""
 	sortOrder := ""
-	
+
 	if sort, ok := filters["sort_by"].(string); ok {
 		sortBy = sort
 	}
 	if order, ok := filters["sort_order"].(string); ok {
 		sortOrder = order
 	}
-	
+
 	orderClause := productOrderBuilder.BuildOrderClause(sortBy, sortOrder)
 
 	//  Safe pagination
 	args = append(args, limit, offset)
 	argCountForLimit := len(args) - 1
-	
+
 	// Build final query
-	// #nosec G201 -- whereClause and orderClause use whitelisted columns only
 	query := fmt.Sprintf(`
 		SELECT id, name, slug, description, price, stock, sku, image_url, 
 		       is_active, created_at, updated_at
@@ -766,11 +791,7 @@ func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, li
 	if err != nil {
 		return nil, 0, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -811,11 +832,7 @@ func (r *ProductRepository) GetFeatured(limit int) ([]models.Product, error) {
 	if err != nil {
 		return nil, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -943,11 +960,7 @@ func (r *ProductRepository) GetCategories(productID int) ([]models.Category, err
 	if err != nil {
 		return nil, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	categories := []models.Category{}
 	for rows.Next() {
@@ -983,7 +996,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 		args[i] = id
 	}
-	inClause := "(" + strings.Join(placeholders, ",")
+	inClause := "(" + fmt.Sprintf("%s", placeholders[0])
 	for i := 1; i < len(placeholders); i++ {
 		inClause += ", " + placeholders[i]
 	}
@@ -991,7 +1004,6 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 
 	// Get total count
 	var total int64
-	// #nosec G201 -- inClause is generated from validated category IDs
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT p.id)
 		FROM products p
@@ -1004,7 +1016,6 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 
 	// Get products
 	args = append(args, limit, offset)
-	// #nosec G201 -- inClause is generated from validated category IDs
 	query := fmt.Sprintf(`
 		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.price, p.stock, 
 		       p.sku, p.image_url, p.is_active, p.created_at, p.updated_at
@@ -1019,11 +1030,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	if err != nil {
 		return nil, 0, err
 	}
-		defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -1047,4 +1054,105 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	}
 
 	return products, total, nil
+}
+
+// GetProductsByCategory retrieves products by category ID with context
+func (r *ProductRepository) GetProductsByCategory(ctx context.Context, categoryID int, page, limit int) ([]*models.Product, int, error) {
+	offset := (page - 1) * limit
+
+	// Get total count
+	var total int
+	countQuery := `
+		SELECT COUNT(DISTINCT p.id)
+		FROM products p
+		INNER JOIN product_categories pc ON p.id = pc.product_id
+		WHERE pc.category_id = $1 AND p.is_active = true
+	`
+	if err := r.db.QueryRowContext(ctx, countQuery, categoryID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Get products
+	query := `
+		SELECT DISTINCT p.id, p.name, p.slug, p.description, p.price, p.stock, 
+		       p.sku, p.image_url, p.is_active, p.created_at, p.updated_at
+		FROM products p
+		INNER JOIN product_categories pc ON p.id = pc.product_id
+		WHERE pc.category_id = $1 AND p.is_active = true
+		ORDER BY p.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, categoryID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	products := []*models.Product{}
+	for rows.Next() {
+		p := &models.Product{}
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.Slug,
+			&p.Description,
+			&p.Price,
+			&p.Stock,
+			&p.SKU,
+			&p.ImageURL,
+			&p.IsActive,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		products = append(products, p)
+	}
+
+	return products, total, nil
+}
+
+// SetActive sets the active status of a product
+func (r *ProductRepository) SetActive(ctx context.Context, productID int, isActive bool) error {
+	query := `
+		UPDATE products
+		SET is_active = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	result, err := r.db.ExecContext(ctx, query, isActive, productID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("product not found")
+	}
+
+	return nil
+}
+
+func (r *ProductRepository) CheckStock(ctx context.Context, productID int, qty int) (bool, error) {
+	var stock int
+	err := r.db.QueryRowContext(
+		ctx,
+		"SELECT stock FROM products WHERE id = $1",
+		productID,
+	).Scan(&stock)
+
+	if err != nil {
+		return false, err
+	}
+
+	if stock < qty {
+		return false, nil
+	}
+
+	return true, nil
 }

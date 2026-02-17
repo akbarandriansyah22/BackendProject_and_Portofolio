@@ -1,0 +1,79 @@
+# ============================================
+# Prometheus Configuration for E-Commerce API
+# ============================================
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+  external_labels:
+    cluster: "staging"
+    environment: "staging"
+    region: "local"
+
+# =====================
+# ALERTMANAGER CONFIG
+# =====================
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+# =====================
+# ALERT RULES
+# =====================
+rule_files:
+  - "/etc/prometheus/rules/alert.rules.yml"
+
+# =====================
+# SCRAPE CONFIGS
+# =====================
+scrape_configs:
+  # ---------------------
+  # Prometheus Self-Scrape
+  # ---------------------
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ---------------------
+  # E-Commerce API
+  # ---------------------
+  - job_name: "ecommerce-api"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: "/metrics"
+    scheme: "http"
+
+    static_configs:
+      - targets: ["ecommerce-api:8080"]
+        labels:
+          service: "ecommerce-api"
+          version: "1.0.0"
+          environment: "staging"
+
+  # ---------------------
+  # cAdvisor (Optional - Container Metrics)
+  # ---------------------
+  # - job_name: "cadvisor"
+  #   static_configs:
+  #     - targets: ["cadvisor:8080"]
+  #   metrics_path: "/metrics"
+
+  # ---------------------
+  # PostgreSQL Exporter (Optional)
+  # ---------------------
+  # - job_name: "postgres"
+  #   static_configs:
+  #     - targets: ["postgres-exporter:9187"]
+  #   metrics_path: "/metrics"
+
+  # ---------------------
+  # Node Exporter (Optional - Host Metrics)
+  # ---------------------
+  # - job_name: "node"
+  #   static_configs:
+  #     - targets: ["node-exporter:9100"]
+  #   metrics_path: "/metrics"

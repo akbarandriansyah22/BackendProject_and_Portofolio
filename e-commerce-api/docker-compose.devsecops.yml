@@ -1,0 +1,173 @@
+services:
+  # =========================
+  # PostgreSQL Database
+  # =========================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-akbar123}
+      POSTGRES_DB: ${DB_NAME:-ecommerce}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================
+  # Application API
+  # =========================
+  api:
+    build: .
+    container_name: ecommerce-api
+    restart: always
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-akbar123}
+      DB_NAME: ${DB_NAME:-ecommerce}
+      DB_SSLMODE: disable
+      SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      ecommerce-network:
+        aliases:
+          - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 180s
+
+  # =========================
+  # Prometheus
+  # =========================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ecommerce-prometheus
+    restart: always
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    networks:
+      - ecommerce-network
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # =========================
+  # Alertmanager
+  # =========================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: ecommerce-alertmanager
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    networks:
+      - ecommerce-network
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  # =========================
+  # Grafana
+  # =========================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ecommerce-grafana
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - ecommerce-network
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  # =========================
+  # Loki
+  # =========================
+  loki:
+    image: grafana/loki:latest
+    container_name: ecommerce-loki
+    restart: always
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - ecommerce-network
+
+  # =========================
+  # Promtail
+  # =========================
+  promtail:
+    image: grafana/promtail:latest
+    container_name: ecommerce-promtail
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./monitoring/promtail:/etc/promtail:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - ecommerce-network
+    depends_on:
+      loki:
+        condition: service_started
+
+# =========================
+# Volumes
+# =========================
+volumes:
+  postgres_data:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+  loki_data:
+
+# =========================
+# Networks
+# =========================
+networks:
+  ecommerce-network:
+    name: ecommerce-network
+    driver: bridge

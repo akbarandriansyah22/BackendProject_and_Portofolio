@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/middleware"
+	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/observability"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/service"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/utils"
 
@@ -13,12 +14,17 @@ import (
 // OrderHandler handles order-related requests
 type OrderHandler struct {
 	orderService *service.OrderService
+	logger       observability.Logger
 }
 
 // NewOrderHandler creates a new order handler
-func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
+func NewOrderHandler(
+	orderService *service.OrderService,
+	logger observability.Logger,
+) *OrderHandler {
 	return &OrderHandler{
 		orderService: orderService,
+		logger:       logger,
 	}
 }
 
@@ -38,11 +44,25 @@ func (h *OrderHandler) GetAll(c *fiber.Ctx) error {
 	// Get orders
 	orders, total, err := h.orderService.GetUserOrders(userID, page, limit)
 	if err != nil {
-		utils.Error("OrderHandler.GetAll: Failed - UserID=%d, Error=%v", userID, err)
+		h.logger.Error("OrderHandler.GetAll: Failed - UserID=%d, Error=%v", userID, err)
 		return utils.InternalServerErrorResponse(c, "Failed to get orders")
 	}
 
-	return utils.PaginatedSuccessResponse(c, "Orders retrieved successfully", orders, page, limit, total)
+	return utils.PaginatedSuccessResponse(c, "Orders retrieved successfully", orders, page, limit, int64(total))
+}
+
+// ListOrders is an alias for GetAll for route handler
+// GET /api/orders
+// Protected: Requires authentication
+func (h *OrderHandler) ListOrders(c *fiber.Ctx) error {
+	return h.GetAll(c)
+}
+
+// CreateOrder creates a new order from cart
+// POST /api/orders
+// Protected: Requires authentication
+func (h *OrderHandler) CreateOrder(c *fiber.Ctx) error {
+	return h.CreateFromCart(c)
 }
 
 // GetByID gets order by ID
@@ -67,13 +87,13 @@ func (h *OrderHandler) GetByID(c *fiber.Ctx) error {
 		if err.Error() == "order not found" {
 			return utils.NotFoundResponse(c, "Order not found")
 		}
-		utils.Error("OrderHandler.GetByID: Failed - OrderID=%d, Error=%v", orderID, err)
+		h.logger.Error("OrderHandler.GetByID: Failed - OrderID=%d, Error=%v", orderID, err)
 		return utils.InternalServerErrorResponse(c, "Failed to get order")
 	}
 
 	// Verify ownership (user can only view their own orders)
 	if order.UserID != userID {
-		utils.Warn("OrderHandler.GetByID: Access denied - UserID=%d attempted to access OrderID=%d", userID, orderID)
+		h.logger.Warn("OrderHandler.GetByID: Access denied - UserID=%d attempted to access OrderID=%d", userID, orderID)
 		return utils.ForbiddenResponse(c, "Access denied")
 	}
 
@@ -102,13 +122,13 @@ func (h *OrderHandler) GetByOrderNumber(c *fiber.Ctx) error {
 		if err.Error() == "order not found" {
 			return utils.NotFoundResponse(c, "Order not found")
 		}
-		utils.Error("OrderHandler.GetByOrderNumber: Failed - OrderNumber=%s, Error=%v", orderNumber, err)
+		h.logger.Error("OrderHandler.GetByOrderNumber: Failed - OrderNumber=%s, Error=%v", orderNumber, err)
 		return utils.InternalServerErrorResponse(c, "Failed to get order")
 	}
 
 	// Verify ownership
 	if order.UserID != userID {
-		utils.Warn("OrderHandler.GetByOrderNumber: Access denied - UserID=%d attempted to access order %s", userID, orderNumber)
+		h.logger.Warn("OrderHandler.GetByOrderNumber: Access denied - UserID=%d attempted to access order %s", userID, orderNumber)
 		return utils.ForbiddenResponse(c, "Access denied")
 	}
 
@@ -118,10 +138,11 @@ func (h *OrderHandler) GetByOrderNumber(c *fiber.Ctx) error {
 // CreateFromCart creates order from cart (checkout)
 // POST /api/orders/checkout
 // Protected: Requires authentication
-// Body: {
-//   "shipping_address": "Jl. Example No. 123",
-//   "payment_method": "bank_transfer"
-// }
+//
+//	Body: {
+//	  "shipping_address": "Jl. Example No. 123",
+//	  "payment_method": "bank_transfer"
+//	}
 func (h *OrderHandler) CreateFromCart(c *fiber.Ctx) error {
 	// Get user ID from context
 	userID, ok := middleware.GetUserID(c)
@@ -137,7 +158,7 @@ func (h *OrderHandler) CreateFromCart(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("OrderHandler.CreateFromCart: Invalid request body - %v", err)
+		h.logger.Warn("OrderHandler.CreateFromCart: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
@@ -189,7 +210,7 @@ func (h *OrderHandler) CreateFromCart(c *fiber.Ctx) error {
 		return utils.BadRequestResponse(c, err.Error())
 	}
 
-	utils.Info("Order created from cart: UserID=%d, OrderID=%d, OrderNumber=%s", userID, order.ID, order.OrderNumber)
+	h.logger.Info("Order created from cart: UserID=%d, OrderID=%d, OrderNumber=%s", userID, order.ID, order.OrderNumber)
 
 	return utils.CreatedResponse(c, "Order created successfully", order)
 }
@@ -211,7 +232,7 @@ func (h *OrderHandler) UpdateStatus(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		utils.Warn("OrderHandler.UpdateStatus: Invalid request body - %v", err)
+		h.logger.Warn("OrderHandler.UpdateStatus: Invalid request body - %v", err)
 		return utils.BadRequestResponse(c, "Invalid request body")
 	}
 
@@ -233,14 +254,14 @@ func (h *OrderHandler) UpdateStatus(c *fiber.Ctx) error {
 		if err.Error() == "order not found" {
 			return utils.NotFoundResponse(c, "Order not found")
 		}
-		utils.Error("OrderHandler.UpdateStatus: Failed - OrderID=%d, Status=%s, Error=%v", orderID, req.Status, err)
+		h.logger.Error("OrderHandler.UpdateStatus: Failed - OrderID=%d, Status=%s, Error=%v", orderID, req.Status, err)
 		return utils.InternalServerErrorResponse(c, "Failed to update order status")
 	}
 
 	// Get updated order
 	order, _ := h.orderService.GetByID(orderID)
 
-	utils.Info("Order status updated: OrderID=%d, NewStatus=%s", orderID, req.Status)
+	h.logger.Info("Order status updated: OrderID=%d, NewStatus=%s", orderID, req.Status)
 
 	return utils.SuccessResponse(c, "Order status updated successfully", order)
 }
@@ -272,7 +293,7 @@ func (h *OrderHandler) CancelOrder(c *fiber.Ctx) error {
 
 	// Verify ownership
 	if order.UserID != userID {
-		utils.Warn("OrderHandler.CancelOrder: Access denied - UserID=%d attempted to cancel OrderID=%d", userID, orderID)
+		h.logger.Warn("OrderHandler.CancelOrder: Access denied - UserID=%d attempted to cancel OrderID=%d", userID, orderID)
 		return utils.ForbiddenResponse(c, "Access denied")
 	}
 
@@ -283,14 +304,14 @@ func (h *OrderHandler) CancelOrder(c *fiber.Ctx) error {
 
 	// Cancel order
 	if err := h.orderService.CancelOrder(orderID); err != nil {
-		utils.Error("OrderHandler.CancelOrder: Failed - OrderID=%d, Error=%v", orderID, err)
+		h.logger.Error("OrderHandler.CancelOrder: Failed - OrderID=%d, Error=%v", orderID, err)
 		return utils.InternalServerErrorResponse(c, "Failed to cancel order")
 	}
 
 	// Get updated order
 	updatedOrder, _ := h.orderService.GetByID(orderID)
 
-	utils.Info("Order cancelled: OrderID=%d, UserID=%d", orderID, userID)
+	h.logger.Info("Order cancelled: OrderID=%d, UserID=%d", orderID, userID)
 
 	return utils.SuccessResponse(c, "Order cancelled successfully", updatedOrder)
 }
@@ -302,7 +323,7 @@ func (h *OrderHandler) GetOrderStats(c *fiber.Ctx) error {
 	// Get statistics
 	stats, err := h.orderService.GetOrderStats()
 	if err != nil {
-		utils.Error("OrderHandler.GetOrderStats: Failed - Error=%v", err)
+		h.logger.Error("OrderHandler.GetOrderStats: Failed - Error=%v", err)
 		return utils.InternalServerErrorResponse(c, "Failed to get order statistics")
 	}
 
@@ -317,15 +338,15 @@ func (h *OrderHandler) GetAllOrders(c *fiber.Ctx) error {
 	page, limit := utils.GetPaginationParams(c)
 
 	// Get filter parameters
-	status := c.Query("status")    // Filter by status
+	status := c.Query("status")     // Filter by status
 	userID := c.QueryInt("user_id") // Filter by user
 
 	// Get all orders
 	orders, total, err := h.orderService.GetAllOrders(page, limit, status, userID)
 	if err != nil {
-		utils.Error("OrderHandler.GetAllOrders: Failed - Error=%v", err)
+		h.logger.Error("OrderHandler.GetAllOrders: Failed - Error=%v", err)
 		return utils.InternalServerErrorResponse(c, "Failed to get orders")
 	}
 
-	return utils.PaginatedSuccessResponse(c, "Orders retrieved successfully", orders, page, limit, total)
+	return utils.PaginatedSuccessResponse(c, "Orders retrieved successfully", orders, page, limit, int64(total))
 }

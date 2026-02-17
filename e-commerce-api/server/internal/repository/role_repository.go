@@ -3,9 +3,8 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
-	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
+	models "github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type RoleRepository struct {
@@ -28,11 +27,7 @@ func (r *RoleRepository) GetAll() ([]models.Role, error) {
 	if err != nil {
 		return nil, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	roles := []models.Role{}
 	for rows.Next() {
@@ -132,7 +127,7 @@ func (r *RoleRepository) Update(role *models.Role) error {
 // Delete deletes a role by ID
 func (r *RoleRepository) Delete(id int) error {
 	query := `DELETE FROM roles WHERE id = $1`
-	
+
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err

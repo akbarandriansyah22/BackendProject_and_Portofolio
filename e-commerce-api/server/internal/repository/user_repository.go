@@ -3,10 +3,9 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
-	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
+	models "github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type UserRepository struct {
@@ -124,11 +123,7 @@ func (r *UserRepository) GetAll(limit, offset int) ([]models.User, int64, error)
 	if err != nil {
 		return nil, 0, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	users := []models.User{}
 	for rows.Next() {
@@ -177,11 +172,7 @@ func (r *UserRepository) GetByRole(roleID int, limit, offset int) ([]models.User
 	if err != nil {
 		return nil, 0, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	users := []models.User{}
 	for rows.Next() {
@@ -377,11 +368,7 @@ func (r *UserRepository) SearchByName(searchTerm string, limit, offset int) ([]m
 	if err != nil {
 		return nil, 0, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	users := []models.User{}
 	for rows.Next() {

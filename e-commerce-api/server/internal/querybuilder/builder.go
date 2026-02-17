@@ -58,8 +58,8 @@ func (b *SQLBuilder) SetDefault(column, order string) *SQLBuilder {
 // It validates both column name and sort order against whitelists
 // Returns: "ORDER BY column_name ORDER_DIRECTION"
 func (b *SQLBuilder) BuildOrderClause(column, order string) string {
-	// Jika column tidak valid, fallback TOTAL ke default
-	if !b.allowedColumns[column] {
+	// FULL fallback if column invalid
+	if column == "" || !b.allowedColumns[column] {
 		return fmt.Sprintf(
 			"ORDER BY %s %s",
 			b.defaultColumn,
@@ -67,14 +67,13 @@ func (b *SQLBuilder) BuildOrderClause(column, order string) string {
 		)
 	}
 
-	// Validate order (case-insensitive)
-	safeOrder := b.defaultOrder
+	// Column valid → validate order
 	upperOrder := strings.ToUpper(order)
-	if b.allowedOrders[upperOrder] {
-		safeOrder = upperOrder
+	if !b.allowedOrders[upperOrder] {
+		upperOrder = b.defaultOrder
 	}
 
-	return fmt.Sprintf("ORDER BY %s %s", column, safeOrder)
+	return fmt.Sprintf("ORDER BY %s %s", column, upperOrder)
 }
 
 // GetAllowedColumns returns a copy of allowed columns (for debugging)

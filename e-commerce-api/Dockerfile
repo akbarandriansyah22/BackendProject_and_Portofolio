@@ -9,14 +9,13 @@ RUN go mod download
 
 COPY . .
 
-# Build tanpa flag GOARCH yang eksplisit - biar auto detect
 RUN CGO_ENABLED=0 go build -o app ./server/cmd
 
 FROM alpine:latest
 
 WORKDIR /app
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates curl
 
 COPY --from=builder /app/app .
 

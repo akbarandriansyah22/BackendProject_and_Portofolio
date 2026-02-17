@@ -5,7 +5,6 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
@@ -20,7 +19,6 @@ type OrderRepository struct {
 var orderOrderBuilder = querybuilder.NewSQLBuilder().
 	AllowColumns("created_at", "updated_at", "total_amount", "status", "order_number").
 	SetDefault("created_at", "DESC")
-
 
 // NewOrderRepository creates a new order repository
 func NewOrderRepository(db *sql.DB) *OrderRepository {
@@ -42,7 +40,7 @@ func (r *OrderRepository) Create(order *models.Order) error {
 		order.OrderNumber,
 		order.Status,
 		order.TotalAmount,
-		order.PaymentMethod,  // Update
+		order.PaymentMethod, // TAMBAHKAN INI
 		order.ShippingAddress,
 		order.ShippingPhone,
 		order.Notes,
@@ -68,7 +66,7 @@ func (r *OrderRepository) GetByID(id int) (*models.Order, error) {
 		&order.OrderNumber,
 		&order.Status,
 		&order.TotalAmount,
-		&order.PaymentMethod,  // update
+		&order.PaymentMethod, // TAMBAHKAN INI
 		&order.ShippingAddress,
 		&order.ShippingPhone,
 		&order.Notes,
@@ -100,7 +98,7 @@ func (r *OrderRepository) GetByOrderNumber(orderNumber string) (*models.Order, e
 		&order.OrderNumber,
 		&order.Status,
 		&order.TotalAmount,
-		&order.PaymentMethod,  // TAMBAHKAN INI
+		&order.PaymentMethod, // TAMBAHKAN INI
 		&order.ShippingAddress,
 		&order.ShippingPhone,
 		&order.Notes,
@@ -114,7 +112,6 @@ func (r *OrderRepository) GetByOrderNumber(orderNumber string) (*models.Order, e
 
 	return order, err
 }
-
 
 // GetByUserID retrieves all orders for a specific user
 func (r *OrderRepository) GetByUserID(userID int, limit, offset int) ([]models.Order, int64, error) {
@@ -139,12 +136,7 @@ func (r *OrderRepository) GetByUserID(userID int, limit, offset int) ([]models.O
 	if err != nil {
 		return nil, 0, err
 	}
-		
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -155,7 +147,7 @@ func (r *OrderRepository) GetByUserID(userID int, limit, offset int) ([]models.O
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod,  // TAMBAHKAN INI
+			&o.PaymentMethod, // TAMBAHKAN INI
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -192,12 +184,7 @@ func (r *OrderRepository) GetAll(limit, offset int) ([]models.Order, int64, erro
 	if err != nil {
 		return nil, 0, err
 	}
-	
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -208,7 +195,7 @@ func (r *OrderRepository) GetAll(limit, offset int) ([]models.Order, int64, erro
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod,  // TAMBAHKAN INI
+			&o.PaymentMethod, // TAMBAHKAN INI
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -246,12 +233,7 @@ func (r *OrderRepository) GetByStatus(status string, limit, offset int) ([]model
 	if err != nil {
 		return nil, 0, err
 	}
-
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -262,7 +244,7 @@ func (r *OrderRepository) GetByStatus(status string, limit, offset int) ([]model
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod,  // update
+			&o.PaymentMethod, // TAMBAHKAN INI
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -300,11 +282,7 @@ func (r *OrderRepository) GetByUserIDAndStatus(userID int, status string, limit,
 	if err != nil {
 		return nil, 0, err
 	}
-	defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -315,7 +293,7 @@ func (r *OrderRepository) GetByUserIDAndStatus(userID int, status string, limit,
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod,  // TAMBAHKAN INI
+			&o.PaymentMethod, // TAMBAHKAN INI
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -353,11 +331,7 @@ func (r *OrderRepository) GetByDateRange(startDate, endDate time.Time, limit, of
 	if err != nil {
 		return nil, 0, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -368,7 +342,7 @@ func (r *OrderRepository) GetByDateRange(startDate, endDate time.Time, limit, of
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod,  // TAMBAHKAN INI
+			&o.PaymentMethod, // TAMBAHKAN INI
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -572,11 +546,7 @@ func (r *OrderRepository) GetRecentOrders(limit int) ([]models.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -587,7 +557,7 @@ func (r *OrderRepository) GetRecentOrders(limit int) ([]models.Order, error) {
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod,  // TAMBAHKAN INI
+			&o.PaymentMethod, // TAMBAHKAN INI
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -632,11 +602,7 @@ func (r *OrderRepository) SearchByOrderNumber(searchTerm string, limit, offset i
 	if err != nil {
 		return nil, 0, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -699,11 +665,7 @@ func (r *OrderRepository) GetOrderItems(orderID int) ([]models.OrderItem, error)
 	if err != nil {
 		return nil, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	items := []models.OrderItem{}
 	for rows.Next() {
@@ -772,7 +734,7 @@ func (r *OrderRepository) GetTodayRevenue() (float64, error) {
 }
 
 // GetAllWithFilters retrieves orders with dynamic filters
-//  Now uses query builder to prevent SQL injection
+// ✅ UPDATED: Now uses query builder to prevent SQL injection
 func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limit, offset int) ([]models.Order, int64, error) {
 	// NEW: Use WHERE clause builder for safe parameterized queries
 	where := querybuilder.NewWhereClause()
@@ -803,7 +765,7 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 	// Build WHERE clause
 	whereClause, args := where.Build()
 	if whereClause == "" {
-		whereClause = "WHERE 1=1"  // Ensure valid SQL if no filters
+		whereClause = "WHERE 1=1" // Ensure valid SQL if no filters
 	}
 
 	// Get total count
@@ -816,23 +778,21 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 	//  NEW: Use query builder for ORDER BY (prevents SQL injection)
 	sortBy := ""
 	sortOrder := ""
-	
+
 	if sort, ok := filters["sort_by"].(string); ok {
 		sortBy = sort
 	}
 	if order, ok := filters["sort_order"].(string); ok {
 		sortOrder = order
 	}
-	
+
 	orderClause := orderOrderBuilder.BuildOrderClause(sortBy, sortOrder)
 
 	// NEW: Safe pagination
 	args = append(args, limit, offset)
 	argCountForLimit := len(args) - 1
 
-	  // Build final query
-     // #nosec G201 -- whereClause uses parameterized conditions only,
-    // and orderClause is constructed from a fixed whitelist of allowed columns and directions
+	// Build final query
 	query := fmt.Sprintf(`
 		SELECT id, user_id, order_number, status, total_amount, 
 		       payment_method, shipping_address, shipping_phone, notes, 
@@ -847,11 +807,7 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 	if err != nil {
 		return nil, 0, err
 	}
-			defer func() {
-	if err := rows.Close(); err != nil {
-		log.Printf("failed to close rows: %v", err)
-	}
-}()
+	defer rows.Close()
 
 	orders := []models.Order{}
 	for rows.Next() {

@@ -1,4 +1,4 @@
-package utils
+package security
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func HashPassword(password string) (string, error) {
 	// 2. Combine salt dengan password
 	// 3. Hash menggunakan bcrypt algorithm
 	// 4. Return hasil hash (sudah include salt di dalamnya)
-	
+
 	// bcrypt.DefaultCost = 10 (recommended, balance antara security & speed)
 	// Semakin tinggi cost, semakin lambat tapi semakin secure
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -31,10 +31,11 @@ func HashPassword(password string) (string, error) {
 
 // VerifyPassword compares a plain text password with a hashed password
 // Fungsi ini untuk CHECK apakah password yang diinput cocok dengan hash di database
-// Input: 
+// Input:
 //   - plainPassword: password yang diinput user saat login (misal: "password123")
 //   - hashedPassword: password hash dari database (misal: "$2a$10$...")
-// Output: 
+//
+// Output:
 //   - true jika cocok
 //   - false jika tidak cocok
 func VerifyPassword(plainPassword, hashedPassword string) bool {
@@ -43,9 +44,9 @@ func VerifyPassword(plainPassword, hashedPassword string) bool {
 	// 2. Hash plainPassword menggunakan salt yang sama
 	// 3. Compare hasilnya dengan hashedPassword
 	// 4. Return nil jika cocok, error jika tidak cocok
-	
+
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
-	
+
 	// Jika err == nil, berarti password cocok
 	return err == nil
 }
@@ -71,9 +72,9 @@ func ValidatePasswordStrength(password string) error {
 
 	// Flags untuk tracking password requirements
 	var (
-		hasUpper   bool // Ada huruf besar?
-		hasLower   bool // Ada huruf kecil?
-		hasNumber  bool // Ada angka?
+		hasUpper  bool // Ada huruf besar?
+		hasLower  bool // Ada huruf kecil?
+		hasNumber bool // Ada angka?
 	)
 
 	// Loop setiap karakter untuk check requirements
@@ -85,9 +86,9 @@ func ValidatePasswordStrength(password string) error {
 			hasLower = true
 		case unicode.IsNumber(char):
 			hasNumber = true
-		// Optional: Uncomment jika mau require special character
-		// case unicode.IsPunct(char) || unicode.IsSymbol(char):
-		// 	hasSpecial = true
+			// Optional: Uncomment jika mau require special character
+			// case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			// 	hasSpecial = true
 		}
 	}
 
@@ -101,7 +102,7 @@ func ValidatePasswordStrength(password string) error {
 	if !hasNumber {
 		return fmt.Errorf("password must contain at least one number")
 	}
-	
+
 	// Optional: Uncomment jika mau require special character
 	// if !hasSpecial {
 	// 	return fmt.Errorf("password must contain at least one special character")
@@ -148,7 +149,7 @@ func GenerateRandomPassword(length int) (string, error) {
 
 	// Generate random password
 	password := make([]byte, length)
-	
+
 	// Untuk simplicity, kita gunakan kombinasi karakter
 	// Note: Untuk production, lebih baik gunakan crypto/rand
 	for i := 0; i < length; i++ {
@@ -212,7 +213,7 @@ func PasswordStrengthScore(password string) int {
 // Fungsi ini untuk CONVERT score jadi text (untuk UI)
 func PasswordStrengthText(password string) string {
 	score := PasswordStrengthScore(password)
-	
+
 	switch score {
 	case 0, 1:
 		return "Very Weak"

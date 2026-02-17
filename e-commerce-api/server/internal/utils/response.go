@@ -11,7 +11,7 @@ import (
 // Response represents standard API response
 // Struktur standar untuk semua response API
 type Response struct {
-	Success bool        `json:"success"`          // Status: true/false
+	Success bool        `json:"success"`           // Status: true/false
 	Message string      `json:"message,omitempty"` // Pesan untuk user
 	Data    interface{} `json:"data,omitempty"`    // Data payload (optional)
 	Error   string      `json:"error,omitempty"`   // Error message (optional)
@@ -22,8 +22,8 @@ type Response struct {
 type PaginatedResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data"`              // Array of items
-	Meta    Pagination  `json:"meta"`              // Pagination info
+	Data    interface{} `json:"data"` // Array of items
+	Meta    Pagination  `json:"meta"` // Pagination info
 }
 
 // Pagination represents pagination metadata
@@ -166,12 +166,13 @@ func InternalServerErrorResponse(c *fiber.Ctx, message string) error {
 
 // ValidationErrorsResponse sends a validation error response
 // Fungsi untuk kirim validation errors (multiple fields)
-// Contoh: 
-//   errors := []ValidationError{
-//     {Field: "email", Message: "Invalid email format"},
-//     {Field: "password", Message: "Password too short"},
-//   }
-//   ValidationErrorsResponse(c, "Validation failed", errors)
+// Contoh:
+//
+//	errors := []ValidationError{
+//	  {Field: "email", Message: "Invalid email format"},
+//	  {Field: "password", Message: "Password too short"},
+//	}
+//	ValidationErrorsResponse(c, "Validation failed", errors)
 func ValidationErrorsResponse(c *fiber.Ctx, message string, errors []ValidationError) error {
 	return c.Status(fiber.StatusBadRequest).JSON(ValidationErrorResponse{
 		Success: false,
@@ -309,18 +310,17 @@ const (
 	ErrUnauthorized   = "Unauthorized"
 	ErrForbidden      = "Forbidden"
 	ErrNotFound       = "Resource not found"
-	
+
 	// Auth errors
 	ErrInvalidCredentials = "Invalid email or password"
 	ErrEmailExists        = "Email already exists"
-	// #nosec G101 -- this is an error message, not a credential
 	ErrInvalidToken       = "Invalid or expired token"
-	
+
 	// Validation errors
 	ErrValidationFailed = "Validation failed"
 	ErrInvalidEmail     = "Invalid email format"
 	ErrPasswordTooShort = "Password must be at least 8 characters"
-	
+
 	// Database errors
 	ErrDatabaseConnection = "Database connection failed"
 	ErrRecordNotFound     = "Record not found"
