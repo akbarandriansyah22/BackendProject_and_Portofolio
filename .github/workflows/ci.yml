@@ -68,14 +68,13 @@ jobs:
         run: |
           cd e-commerce-api
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
-          # Run with minimum severity MEDIUM; exit code 1 on violations
-          gosec -fmt sarif -out ../gosec.sarif -severity medium ./...
+          gosec -fmt sarif -out gosec.sarif -severity medium ./...
 
       - name: Upload GoSec SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: gosec.sarif
+          sarif_file: e-commerce-api/gosec.sarif
           category: gosec
 
       # =====================
