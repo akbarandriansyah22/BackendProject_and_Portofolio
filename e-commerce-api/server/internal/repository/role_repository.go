@@ -27,7 +27,10 @@ func (r *RoleRepository) GetAll() ([]models.Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	roles := []models.Role{}
 	for rows.Next() {

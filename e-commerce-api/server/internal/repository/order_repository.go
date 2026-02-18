@@ -40,7 +40,7 @@ func (r *OrderRepository) Create(order *models.Order) error {
 		order.OrderNumber,
 		order.Status,
 		order.TotalAmount,
-		order.PaymentMethod, // TAMBAHKAN INI
+		order.PaymentMethod, // update
 		order.ShippingAddress,
 		order.ShippingPhone,
 		order.Notes,
@@ -98,7 +98,7 @@ func (r *OrderRepository) GetByOrderNumber(orderNumber string) (*models.Order, e
 		&order.OrderNumber,
 		&order.Status,
 		&order.TotalAmount,
-		&order.PaymentMethod, // TAMBAHKAN INI
+		&order.PaymentMethod, // update
 		&order.ShippingAddress,
 		&order.ShippingPhone,
 		&order.Notes,
@@ -136,7 +136,11 @@ func (r *OrderRepository) GetByUserID(userID int, limit, offset int) ([]models.O
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -147,7 +151,7 @@ func (r *OrderRepository) GetByUserID(userID int, limit, offset int) ([]models.O
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod, // TAMBAHKAN INI
+			&o.PaymentMethod, // update
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -184,7 +188,10 @@ func (r *OrderRepository) GetAll(limit, offset int) ([]models.Order, int64, erro
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -195,7 +202,7 @@ func (r *OrderRepository) GetAll(limit, offset int) ([]models.Order, int64, erro
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod, // TAMBAHKAN INI
+			&o.PaymentMethod, // update
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -233,7 +240,10 @@ func (r *OrderRepository) GetByStatus(status string, limit, offset int) ([]model
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -244,7 +254,7 @@ func (r *OrderRepository) GetByStatus(status string, limit, offset int) ([]model
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod, // TAMBAHKAN INI
+			&o.PaymentMethod, // update
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -282,7 +292,10 @@ func (r *OrderRepository) GetByUserIDAndStatus(userID int, status string, limit,
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -293,7 +306,7 @@ func (r *OrderRepository) GetByUserIDAndStatus(userID int, status string, limit,
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod, // TAMBAHKAN INI
+			&o.PaymentMethod, // update
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -331,7 +344,10 @@ func (r *OrderRepository) GetByDateRange(startDate, endDate time.Time, limit, of
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -342,7 +358,7 @@ func (r *OrderRepository) GetByDateRange(startDate, endDate time.Time, limit, of
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod, // TAMBAHKAN INI
+			&o.PaymentMethod, // update
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -546,7 +562,10 @@ func (r *OrderRepository) GetRecentOrders(limit int) ([]models.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -557,7 +576,7 @@ func (r *OrderRepository) GetRecentOrders(limit int) ([]models.Order, error) {
 			&o.OrderNumber,
 			&o.Status,
 			&o.TotalAmount,
-			&o.PaymentMethod, // TAMBAHKAN INI
+			&o.PaymentMethod, // update
 			&o.ShippingAddress,
 			&o.ShippingPhone,
 			&o.Notes,
@@ -602,7 +621,10 @@ func (r *OrderRepository) SearchByOrderNumber(searchTerm string, limit, offset i
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {
@@ -628,9 +650,9 @@ func (r *OrderRepository) SearchByOrderNumber(searchTerm string, limit, offset i
 	return orders, total, nil
 }
 
-// ========================================
+
 // ORDER ITEMS METHODS
-// ========================================
+
 
 // AddOrderItem adds an item to an order
 func (r *OrderRepository) AddOrderItem(orderItem *models.OrderItem) error {
@@ -665,7 +687,10 @@ func (r *OrderRepository) GetOrderItems(orderID int) ([]models.OrderItem, error)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	items := []models.OrderItem{}
 	for rows.Next() {
@@ -687,9 +712,8 @@ func (r *OrderRepository) GetOrderItems(orderID int) ([]models.OrderItem, error)
 	return items, nil
 }
 
-// ========================================
+
 // STATISTICS & ANALYTICS METHODS
-// ========================================
 
 // CountTotal counts total orders (alias untuk CountTotalOrders)
 func (r *OrderRepository) CountTotal() (int64, error) {
@@ -734,7 +758,7 @@ func (r *OrderRepository) GetTodayRevenue() (float64, error) {
 }
 
 // GetAllWithFilters retrieves orders with dynamic filters
-// ✅ UPDATED: Now uses query builder to prevent SQL injection
+// UPDATED: Now uses query builder to prevent SQL injection
 func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limit, offset int) ([]models.Order, int64, error) {
 	// NEW: Use WHERE clause builder for safe parameterized queries
 	where := querybuilder.NewWhereClause()
@@ -807,7 +831,11 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+
+    }
+}()
 
 	orders := []models.Order{}
 	for rows.Next() {

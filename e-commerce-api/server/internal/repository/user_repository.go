@@ -123,7 +123,10 @@ func (r *UserRepository) GetAll(limit, offset int) ([]models.User, int64, error)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	users := []models.User{}
 	for rows.Next() {
@@ -172,7 +175,10 @@ func (r *UserRepository) GetByRole(roleID int, limit, offset int) ([]models.User
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	users := []models.User{}
 	for rows.Next() {
@@ -368,7 +374,10 @@ func (r *UserRepository) SearchByName(searchTerm string, limit, offset int) ([]m
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	users := []models.User{}
 	for rows.Next() {

@@ -132,7 +132,10 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -159,7 +162,7 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 }
 
 // GetActive retrieves only active products with pagination
-// ✅ METHOD INI DITAMBAHKAN!
+// UPDATE METHOD!
 func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int64, error) {
 	// Get total count (only active)
 	var total int64
@@ -182,7 +185,11 @@ func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int6
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -233,7 +240,11 @@ func (r *ProductRepository) List(ctx context.Context, filter *models.ProductFilt
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []*models.Product{}
 	for rows.Next() {
@@ -288,7 +299,10 @@ func (r *ProductRepository) GetByCategory(categoryID int, limit, offset int) ([]
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -490,7 +504,11 @@ func (r *ProductRepository) Search(ctx context.Context, keyword string, page, li
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []*models.Product{}
 	for rows.Next() {
@@ -543,7 +561,11 @@ func (r *ProductRepository) GetByPriceRange(minPrice, maxPrice float64, limit, o
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -584,7 +606,10 @@ func (r *ProductRepository) GetLowStock(threshold int, limit int) ([]models.Prod
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -633,7 +658,10 @@ func (r *ProductRepository) GetOutOfStock(limit, offset int) ([]models.Product, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -791,7 +819,10 @@ func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, li
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -832,7 +863,10 @@ func (r *ProductRepository) GetFeatured(limit int) ([]models.Product, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -915,9 +949,9 @@ func (r *ProductRepository) GetTotalStockValue() (float64, error) {
 	return total, err
 }
 
-// ========================================
+
 // CATEGORY RELATIONSHIP METHODS
-// ========================================
+
 
 // AddToCategory adds a product to a category
 func (r *ProductRepository) AddToCategory(productID, categoryID int) error {
@@ -960,7 +994,10 @@ func (r *ProductRepository) GetCategories(productID int) ([]models.Category, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	categories := []models.Category{}
 	for rows.Next() {
@@ -996,7 +1033,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 		args[i] = id
 	}
-	inClause := "(" + fmt.Sprintf("%s", placeholders[0])
+	inClause := "(" + placeholders[0]
 	for i := 1; i < len(placeholders); i++ {
 		inClause += ", " + placeholders[i]
 	}
@@ -1030,7 +1067,10 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+    defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {
@@ -1087,7 +1127,10 @@ func (r *ProductRepository) GetProductsByCategory(ctx context.Context, categoryI
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []*models.Product{}
 	for rows.Next() {

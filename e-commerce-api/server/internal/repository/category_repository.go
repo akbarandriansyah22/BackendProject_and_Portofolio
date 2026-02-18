@@ -103,7 +103,10 @@ func (r *CategoryRepository) GetAll() ([]models.Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	category := []models.Category{}
 	for rows.Next() {
@@ -148,7 +151,11 @@ func (r *CategoryRepository) GetAllWithPagination(limit, offset int) ([]models.C
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	categories := []models.Category{}
 	for rows.Next() {
@@ -183,7 +190,10 @@ func (r *CategoryRepository) GetAllIncludeInactive() ([]models.Category, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	category := []models.Category{}
 	for rows.Next() {
@@ -219,7 +229,10 @@ func (r *CategoryRepository) GetParentCategories() ([]models.Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	category := []models.Category{}
 	for rows.Next() {
@@ -255,7 +268,10 @@ func (r *CategoryRepository) GetSubCategories(parentID int) ([]models.Category, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	category := []models.Category{}
 	for rows.Next() {
@@ -278,7 +294,7 @@ func (r *CategoryRepository) GetSubCategories(parentID int) ([]models.Category, 
 	return category, nil
 }
 
-// ✅ ADDED: GetByParentID - alias for GetSubCategories (dipanggil di category_service.go)
+// ADDED: GetByParentID - alias for GetSubCategories (dipanggil di category_service.go)
 func (r *CategoryRepository) GetByParentID(parentID int) ([]models.Category, error) {
 	return r.GetSubCategories(parentID)
 }
@@ -326,7 +342,7 @@ func (r *CategoryRepository) Update(category *models.Category) error {
 	).Scan(&category.UpdatedAt)
 }
 
-// ✅ ADDED: UpdateStatus - update category active status (dipanggil di category_service.go)
+// ADDED: UpdateStatus - update category active status (dipanggil di category_service.go)
 func (r *CategoryRepository) UpdateStatus(id int, isActive bool) error {
 	query := `
 		UPDATE categories
@@ -459,7 +475,7 @@ func (r *CategoryRepository) CountTotal() (int64, error) {
 	return count, err
 }
 
-// ✅ ADDED: CountByStatus - count categories by active status (dipanggil di category_service.go)
+// ADDED: CountByStatus - count categories by active status (dipanggil di category_service.go)
 func (r *CategoryRepository) CountByStatus(isActive bool) (int64, error) {
 	query := `SELECT COUNT(*) FROM categories WHERE is_active = $1`
 	var count int64
@@ -490,7 +506,11 @@ func (r *CategoryRepository) Search(keyword string) ([]models.Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	categories := []models.Category{}
 	for rows.Next() {
@@ -513,7 +533,7 @@ func (r *CategoryRepository) Search(keyword string) ([]models.Category, error) {
 	return categories, nil
 }
 
-// ✅ ADDED: GetProducts - get products for a category (dipanggil di category_service.go)
+// ADDED: GetProducts - get products for a category (dipanggil di category_service.go)
 func (r *CategoryRepository) GetProducts(categoryID, limit, offset int) ([]models.Product, int64, error) {
 	// Get total count
 	var total int64
@@ -542,7 +562,10 @@ func (r *CategoryRepository) GetProducts(categoryID, limit, offset int) ([]model
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+    if err := rows.Close(); err != nil {
+    }
+}()
 
 	products := []models.Product{}
 	for rows.Next() {

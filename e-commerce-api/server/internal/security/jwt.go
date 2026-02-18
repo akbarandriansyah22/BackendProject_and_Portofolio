@@ -7,12 +7,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// ============================================
 // JWT CLAIMS STRUCTURE
-// ============================================
 
 // JWTClaims represents the claims stored in JWT token
-// Claims = data yang disimpan di dalam token
+
 type JWTClaims struct {
 	UserID   int    `json:"user_id"`   // ID user dari database
 	Email    string `json:"email"`     // Email user
@@ -21,13 +19,12 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// ============================================
+
 // TOKEN GENERATION
-// ============================================
+
 
 // GenerateToken generates a new JWT token
-// Fungsi untuk GENERATE JWT token (dipanggil saat login sukses)
-// Input: userID, email, roleID, fullName, secret, expiresIn (dalam jam)
+// Input: userID, email, roleID, fullName, secret, expiresIn (in hours)
 // Output: token string
 func GenerateToken(userID int, email string, roleID int, fullName string, secret string, expiresIn int) (string, error) {
 	// Set expiration time
@@ -62,27 +59,23 @@ func GenerateToken(userID int, email string, roleID int, fullName string, secret
 }
 
 // GenerateAccessToken generates an access token (short-lived)
-// Fungsi shortcut untuk generate access token (expired dalam 24 jam)
-// Contoh: token, _ := GenerateAccessToken(user, secret)
+
 func GenerateAccessToken(userID int, email string, roleID int, fullName string, secret string) (string, error) {
 	return GenerateToken(userID, email, roleID, fullName, secret, 24) // 24 hours
 }
 
 // GenerateRefreshToken generates a refresh token (long-lived)
-// Fungsi shortcut untuk generate refresh token (expired dalam 7 hari)
-// Contoh: refreshToken, _ := GenerateRefreshToken(user, secret)
+
 func GenerateRefreshToken(userID int, email string, roleID int, fullName string, secret string) (string, error) {
 	return GenerateToken(userID, email, roleID, fullName, secret, 24*7) // 7 days
 }
 
-// ============================================
+
 // TOKEN VERIFICATION
-// ============================================
+
 
 // ParseToken parses and validates a JWT token
-// Fungsi untuk PARSE dan VALIDATE JWT token
-// Input: token string, secret
-// Output: claims (jika valid), error (jika invalid)
+
 func ParseToken(tokenString string, secret string) (*JWTClaims, error) {
 	// Parse token
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -108,19 +101,17 @@ func ParseToken(tokenString string, secret string) (*JWTClaims, error) {
 }
 
 // VerifyToken verifies if a token is valid
-// Fungsi untuk VERIFY apakah token valid (tanpa extract claims)
-// Return: true jika valid, false jika invalid
+
 func VerifyToken(tokenString string, secret string) bool {
 	_, err := ParseToken(tokenString, secret)
 	return err == nil
 }
 
-// ============================================
+
 // TOKEN EXTRACTION
-// ============================================
+
 
 // ExtractUserID extracts user ID from token
-// Fungsi helper untuk extract userID dari token
 func ExtractUserID(tokenString string, secret string) (int, error) {
 	claims, err := ParseToken(tokenString, secret)
 	if err != nil {
@@ -130,7 +121,7 @@ func ExtractUserID(tokenString string, secret string) (int, error) {
 }
 
 // ExtractEmail extracts email from token
-// Fungsi helper untuk extract email dari token
+
 func ExtractEmail(tokenString string, secret string) (string, error) {
 	claims, err := ParseToken(tokenString, secret)
 	if err != nil {
@@ -140,7 +131,7 @@ func ExtractEmail(tokenString string, secret string) (string, error) {
 }
 
 // ExtractRoleID extracts role ID from token
-// Fungsi helper untuk extract roleID dari token
+
 func ExtractRoleID(tokenString string, secret string) (int, error) {
 	claims, err := ParseToken(tokenString, secret)
 	if err != nil {
@@ -149,12 +140,12 @@ func ExtractRoleID(tokenString string, secret string) (int, error) {
 	return claims.RoleID, nil
 }
 
-// ============================================
+
 // TOKEN VALIDATION CHECKS
-// ============================================
+
 
 // IsTokenExpired checks if token is expired
-// Fungsi untuk cek apakah token sudah expired
+
 func IsTokenExpired(tokenString string, secret string) bool {
 	claims, err := ParseToken(tokenString, secret)
 	if err != nil {
@@ -162,11 +153,12 @@ func IsTokenExpired(tokenString string, secret string) bool {
 	}
 
 	// Check if token is expired
-	return claims.ExpiresAt.Time.Before(time.Now())
+	return claims.ExpiresAt.Before(time.Now())
+
 }
 
 // GetTokenExpiration gets token expiration time
-// Fungsi untuk get waktu expired token
+
 func GetTokenExpiration(tokenString string, secret string) (time.Time, error) {
 	claims, err := ParseToken(tokenString, secret)
 	if err != nil {
@@ -176,7 +168,7 @@ func GetTokenExpiration(tokenString string, secret string) (time.Time, error) {
 }
 
 // GetTokenRemainingTime gets remaining valid time of token
-// Fungsi untuk get sisa waktu valid token
+
 func GetTokenRemainingTime(tokenString string, secret string) (time.Duration, error) {
 	expiration, err := GetTokenExpiration(tokenString, secret)
 	if err != nil {
@@ -191,13 +183,12 @@ func GetTokenRemainingTime(tokenString string, secret string) (time.Duration, er
 	return remaining, nil
 }
 
-// ============================================
+
 // TOKEN REFRESH
-// ============================================
+
 
 // RefreshToken refreshes an existing token
-// Fungsi untuk REFRESH token (generate token baru dari token lama)
-// Use case: Token hampir expired, generate token baru
+
 func RefreshToken(oldTokenString string, secret string, expiresIn int) (string, error) {
 	// Parse old token (even if expired)
 	claims, err := ParseToken(oldTokenString, secret)
@@ -209,13 +200,12 @@ func RefreshToken(oldTokenString string, secret string, expiresIn int) (string, 
 	return GenerateToken(claims.UserID, claims.Email, claims.RoleID, claims.FullName, secret, expiresIn)
 }
 
-// ============================================
+
 // TOKEN BLACKLIST HELPERS
-// ============================================
+
 
 // GetTokenIdentifier gets a unique identifier for the token
-// Fungsi untuk get unique ID token (untuk blacklist)
-// Return: hash dari token untuk disimpan di blacklist
+
 func GetTokenIdentifier(tokenString string) string {
 	// Simple implementation: return first 32 chars
 	// In production: use hash (SHA256)
@@ -225,12 +215,12 @@ func GetTokenIdentifier(tokenString string) string {
 	return tokenString
 }
 
-// ============================================
+
 // VALIDATION HELPERS
-// ============================================
+
 
 // ValidateTokenFormat validates basic token format
-// Fungsi untuk validate format token (tanpa verify signature)
+
 func ValidateTokenFormat(tokenString string) bool {
 	// Basic check: JWT should have 3 parts separated by dots
 	// Format: header.payload.signature
@@ -243,19 +233,19 @@ func ValidateTokenFormat(tokenString string) bool {
 	return parts == 2 && len(tokenString) > 20
 }
 
-// ============================================
+
 // TOKEN INFO
-// ============================================
+
 
 // GetTokenInfo gets detailed information about token
-// Fungsi untuk get informasi lengkap tentang token
+
 func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, error) {
 	claims, err := ParseToken(tokenString, secret)
 	if err != nil {
 		return nil, err
 	}
 
-	isExpired := claims.ExpiresAt.Time.Before(time.Now())
+	isExpired := claims.ExpiresAt.Before(time.Now())
 	remaining := time.Until(claims.ExpiresAt.Time)
 	if remaining < 0 {
 		remaining = 0
@@ -276,9 +266,9 @@ func GetTokenInfo(tokenString string, secret string) (map[string]interface{}, er
 	return info, nil
 }
 
-// ============================================
+
 // CONSTANTS
-// ============================================
+
 
 const (
 	// Token expiration times (in hours)
