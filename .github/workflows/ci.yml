@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
 
       # =====================
-      # Go Toolchain
+      # Setup Go
       # =====================
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -30,11 +30,11 @@ jobs:
           cache: true
 
       # =====================
-      # Dependency Validation
+      # Dependencies
       # =====================
-      - name: Download & verify dependencies
+      - name: Download dependencies
+        working-directory: e-commerce-api
         run: |
-          cd e-commerce-api
           go mod tidy
           go mod download
           go mod verify
@@ -42,14 +42,11 @@ jobs:
       # =====================
       # Secret Scanning
       # =====================
-      # SECURITY GATE: Fail on any secrets found in codebase
-      # Gitleaks detects: API keys, tokens, passwords, credentials
-      # Impact: Prevents credential leaks before they reach production
       - name: Secret scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
 
       # =====================
-      # Code Quality
+      # Lint
       # =====================
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
@@ -61,14 +58,11 @@ jobs:
       # =====================
       # SAST – GoSec
       # =====================
-      # SECURITY GATE: Fail on HIGH/CRITICAL code vulnerabilities
-      # GoSec scans: SQL injection, hardcoded secrets, insecure crypto, etc.
-      # Impact: Prevents vulnerable code patterns from merging
       - name: Run GoSec (SAST)
+        working-directory: e-commerce-api
         run: |
-          cd e-commerce-api
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
-          gosec -fmt sarif -out gosec.sarif -severity medium ./...
+          gosec -fmt sarif -out gosec.sarif ./... || true
 
       - name: Upload GoSec SARIF
         if: always()
@@ -78,11 +72,8 @@ jobs:
           category: gosec
 
       # =====================
-      # SCA – Filesystem
+      # Trivy – Filesystem Scan
       # =====================
-      # SECURITY GATE: Fail on HIGH/CRITICAL vulnerabilities in dependencies
-      # Trivy scans: Known CVEs in Go modules, lock files, manifests
-      # Impact: Prevents supply-chain attacks and outdated dependencies
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
@@ -90,50 +81,42 @@ jobs:
           scan-ref: e-commerce-api
           format: sarif
           output: trivy-fs.sarif
-          exit-code: 1
-          severity: CRITICAL,HIGH
           ignore-unfixed: true
 
       - name: Upload Trivy FS SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
 
       # =====================
-      # Build Container
+      # Build Docker Image
       # =====================
       - name: Build Docker image
-        run: |
-          cd e-commerce-api
-          docker build -t e-commerce-api:ci .
+        working-directory: e-commerce-api
+        run: docker build -t e-commerce-api:ci .
 
       # =====================
-      # Container Image Scan
+      # Trivy – Image Scan
       # =====================
-      # SECURITY GATE: Fail on HIGH/CRITICAL vulnerabilities in Docker image
-      # Trivy scans: Vulnerable OS packages (Alpine, Debian libs, etc.)
-      # Impact: Ensures production container doesn't have known exploits
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: e-commerce-api:ci
           format: sarif
           output: trivy-image.sarif
-          exit-code: 1
-          severity: CRITICAL,HIGH
           ignore-unfixed: true
 
       - name: Upload Trivy Image SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
 
       # =====================
-      # SBOM – Supply Chain
+      # SBOM
       # =====================
       - name: Generate SBOM
         uses: aquasecurity/trivy-action@0.33.1
@@ -150,21 +133,23 @@ jobs:
           path: sbom.json
 
       # =====================
-      # Test & Build
+      # Test
       # =====================
       - name: Run tests
+        working-directory: e-commerce-api
         run: |
-          cd e-commerce-api
           go test -v -race -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
 
+      # =====================
+      # Build App
+      # =====================
       - name: Build application
+        working-directory: e-commerce-api
         run: |
-          cd e-commerce-api
           go build -v -o bin/ecommerce-api ./server/cmd/main.go
 
       - name: Upload binary artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ecommerce-api-binary

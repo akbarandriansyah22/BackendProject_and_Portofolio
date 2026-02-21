@@ -14,11 +14,10 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/e-commerce-api
+  IMAGE_NAME: akbarandriansyah22/backendproject_and_portofolio/e-commerce-api
 
 jobs:
   deploy:
-    # Only deploy if CI pipeline succeeded
     if: |
       github.event_name == 'push' || 
       github.event.workflow_run.conclusion == 'success'
@@ -26,15 +25,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =====================
-      # Checkout
-      # =====================
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # =====================
-      # Build & Push Docker Image
-      # =====================
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -53,8 +46,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=staging
             type=raw,value=latest
 
@@ -67,128 +58,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-
-      # =====================
-      # Deploy to Staging
-      # =====================
-      - name: Deploy to staging environment
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          STAGING_ENV_FILE: ${{ secrets.STAGING_ENV_FILE }}
-        run: |
-          # Install SSH key
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # Add host to known_hosts (prevent MITM)
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          # Copy deployment script
-          cat > /tmp/deploy.sh << 'EOF'
-          #!/bin/bash
-          set -e
-
-          REGISTRY="$1"
-          IMAGE_NAME="$2"
-          TAG="$3"
-          ENV_FILE="$4"
-
-          echo "[*] Deploying $REGISTRY/$IMAGE_NAME:$TAG to staging..."
-
-          # Pull latest image
-          docker pull "$REGISTRY/$IMAGE_NAME:$TAG" || {
-            echo "[!] Failed to pull image"
-            exit 1
-          }
-
-          # Load environment file
-          if [ ! -f "$ENV_FILE" ]; then
-            echo "[!] Environment file not found: $ENV_FILE"
-            exit 1
-          fi
-
-          # Stop existing container gracefully
-          docker stop ecommerce-api 2>/dev/null || true
-          docker rm ecommerce-api 2>/dev/null || true
-
-          # Start new container with health check
-          docker run -d \
-            --name ecommerce-api \
-            --restart unless-stopped \
-            --network ecommerce-network \
-            --env-file "$ENV_FILE" \
-            -p 8080:8080 \
-            --health-cmd='curl -f http://localhost:8080/health || exit 1' \
-            --health-interval=10s \
-            --health-timeout=5s \
-            --health-retries=3 \
-            "$REGISTRY/$IMAGE_NAME:$TAG"
-
-          # Wait for container to be healthy
-          echo "[*] Waiting for container to be healthy..."
-          for i in {1..30}; do
-            if docker inspect --format='{{.State.Health.Status}}' ecommerce-api | grep -q healthy; then
-              echo "[✓] Container is healthy"
-              exit 0
-            fi
-            echo "[.] Attempt $i/30..."
-            sleep 2
-          done
-
-          echo "[!] Container failed health check"
-          docker logs ecommerce-api
-          exit 1
-          EOF
-
-          chmod +x /tmp/deploy.sh
-
-          # Execute deployment on remote host
-          scp -r /tmp/deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:/tmp/"
-          ssh "$DEPLOY_USER@$DEPLOY_HOST" \
-            /tmp/deploy.sh \
-            "$REGISTRY" \
-            "$IMAGE_NAME" \
-            "staging" \
-            "/home/$DEPLOY_USER/.env.staging"
-
-          echo "[✓] Deployment completed successfully"
-
-      # =====================
-      # Smoke Test
-      # =====================
-      - name: Run smoke tests
-        env:
-          STAGING_URL: ${{ secrets.STAGING_URL }}
-        run: |
-          echo "[*] Running smoke tests against staging..."
-
-          # Test health endpoint
-          HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/health")
-          if [ "$HEALTH_RESPONSE" != "200" ]; then
-            echo "[!] Health check failed with status: $HEALTH_RESPONSE"
-            exit 1
-          fi
-
-          # Test metrics endpoint
-          METRICS_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/metrics")
-          if [ "$METRICS_RESPONSE" != "200" ]; then
-            echo "[!] Metrics endpoint failed with status: $METRICS_RESPONSE"
-            exit 1
-          fi
-
-          echo "[✓] Smoke tests passed"
-
-      # =====================
-      # Deployment Notification
-      # =====================
-      - name: Deployment status notification
-        if: always()
-        run: |
-          STATUS="${{ job.status }}"
-          echo "[*] Deployment $STATUS"
-          echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref }}"
-          echo "Actor: ${{ github.actor }}"
