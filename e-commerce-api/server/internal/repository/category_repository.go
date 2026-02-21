@@ -4,16 +4,22 @@ import (
 	"database/sql"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type CategoryRepository struct {
 	db *sql.DB
+	logger *zap.Logger
 }
 
 // NewCategoryRepository creates a new category repository
-func NewCategoryRepository(db *sql.DB) *CategoryRepository {
-	return &CategoryRepository{db: db}
+func NewCategoryRepository(db *sql.DB, logger *zap.Logger) *CategoryRepository {
+	return &CategoryRepository{
+		db:     db,
+		logger: logger,
+	}
 }
 
 // Create creates a new category
@@ -105,6 +111,8 @@ func (r *CategoryRepository) GetAll() ([]models.Category, error) {
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
+
     }
 }()
 
@@ -154,6 +162,7 @@ func (r *CategoryRepository) GetAllWithPagination(limit, offset int) ([]models.C
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
     }
 }()
 
@@ -192,6 +201,7 @@ func (r *CategoryRepository) GetAllIncludeInactive() ([]models.Category, error) 
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
     }
 }()
 
@@ -231,6 +241,7 @@ func (r *CategoryRepository) GetParentCategories() ([]models.Category, error) {
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
     }
 }()
 
@@ -270,6 +281,7 @@ func (r *CategoryRepository) GetSubCategories(parentID int) ([]models.Category, 
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
     }
 }()
 
@@ -509,6 +521,7 @@ func (r *CategoryRepository) Search(keyword string) ([]models.Category, error) {
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
     }
 }()
 
@@ -564,6 +577,7 @@ func (r *CategoryRepository) GetProducts(categoryID, limit, offset int) ([]model
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		r.logger.Warn("rows close error", zap.Error(err))
     }
 }()
 

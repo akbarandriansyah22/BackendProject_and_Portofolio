@@ -3,16 +3,22 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
+
+	"go.uber.org/zap"
 
 	models "github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type RoleRepository struct {
 	db *sql.DB
+	logger *zap.Logger
 }
 
-func NewRoleRepository(db *sql.DB) *RoleRepository {
-	return &RoleRepository{db: db}
+func NewRoleRepository(db *sql.DB, logger *zap.Logger) *RoleRepository {
+	return &RoleRepository{
+		db: db,
+	logger: logger,}
 }
 
 // GetAll retrieves all roles
@@ -29,6 +35,7 @@ func (r *RoleRepository) GetAll() ([]models.Role, error) {
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 

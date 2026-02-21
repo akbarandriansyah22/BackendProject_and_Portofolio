@@ -3,18 +3,25 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type PaymentRepository struct {
 	db *sql.DB
+	logger *zap.Logger
 }
 
 // NewPaymentRepository creates a new payment repository
-func NewPaymentRepository(db *sql.DB) *PaymentRepository {
-	return &PaymentRepository{db: db}
+func NewPaymentRepository(db *sql.DB, logger *zap.Logger) *PaymentRepository {
+	return &PaymentRepository{
+		db: db,
+	logger: logger,
+}
 }
 
 // Create creates a new payment
@@ -149,6 +156,7 @@ func (r *PaymentRepository) GetAll(limit, offset int) ([]models.Payment, int64, 
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -199,6 +207,7 @@ func (r *PaymentRepository) GetByStatus(status string, limit, offset int) ([]mod
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -250,6 +259,7 @@ func (r *PaymentRepository) GetByPaymentMethod(paymentMethod string, limit, offs
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -301,6 +311,7 @@ func (r *PaymentRepository) GetByDateRange(startDate, endDate time.Time, limit, 
 	
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 

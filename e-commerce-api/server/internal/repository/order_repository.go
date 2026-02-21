@@ -5,7 +5,10 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/querybuilder"
@@ -13,6 +16,8 @@ import (
 
 type OrderRepository struct {
 	db *sql.DB
+	logger *zap.Logger
+	
 }
 
 // Newquerybuilder it is save backend
@@ -21,8 +26,11 @@ var orderOrderBuilder = querybuilder.NewSQLBuilder().
 	SetDefault("created_at", "DESC")
 
 // NewOrderRepository creates a new order repository
-func NewOrderRepository(db *sql.DB) *OrderRepository {
-	return &OrderRepository{db: db}
+func NewOrderRepository(db *sql.DB, logger *zap.Logger) *OrderRepository {
+	return &OrderRepository{
+		db: db,
+		logger: logger,
+	}
 }
 
 // Create creates a new order
@@ -139,6 +147,7 @@ func (r *OrderRepository) GetByUserID(userID int, limit, offset int) ([]models.O
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -190,6 +199,7 @@ func (r *OrderRepository) GetAll(limit, offset int) ([]models.Order, int64, erro
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -242,6 +252,7 @@ func (r *OrderRepository) GetByStatus(status string, limit, offset int) ([]model
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -294,6 +305,7 @@ func (r *OrderRepository) GetByUserIDAndStatus(userID int, status string, limit,
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -346,6 +358,7 @@ func (r *OrderRepository) GetByDateRange(startDate, endDate time.Time, limit, of
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -564,6 +577,7 @@ func (r *OrderRepository) GetRecentOrders(limit int) ([]models.Order, error) {
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -623,6 +637,7 @@ func (r *OrderRepository) SearchByOrderNumber(searchTerm string, limit, offset i
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -689,6 +704,7 @@ func (r *OrderRepository) GetOrderItems(orderID int) ([]models.OrderItem, error)
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -833,7 +849,7 @@ func (r *OrderRepository) GetAllWithFilters(filters map[string]interface{}, limi
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
-
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 

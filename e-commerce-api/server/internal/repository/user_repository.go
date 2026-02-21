@@ -3,18 +3,24 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	models "github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type UserRepository struct {
 	db *sql.DB
+	logger *zap.Logger
 }
 
 // NewUserRepository creates a new user repository
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *sql.DB, logger *zap.Logger) *UserRepository {
+	return &UserRepository{
+		db: db,
+	logger: logger,}
 }
 
 // Create creates a new user
@@ -125,6 +131,7 @@ func (r *UserRepository) GetAll(limit, offset int) ([]models.User, int64, error)
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -177,6 +184,7 @@ func (r *UserRepository) GetByRole(roleID int, limit, offset int) ([]models.User
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -376,6 +384,7 @@ func (r *UserRepository) SearchByName(searchTerm string, limit, offset int) ([]m
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 

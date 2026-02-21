@@ -5,6 +5,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
@@ -118,8 +119,11 @@ func (r *CartRepository) GetCartItems(cartID int) ([]models.CartItemWithProduct,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
+	defer func() {
+    if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
+    }
+}()
 	items := []models.CartItemWithProduct{}
 	for rows.Next() {
 		var item models.CartItemWithProduct

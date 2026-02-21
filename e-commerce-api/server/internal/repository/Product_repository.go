@@ -5,6 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+
+	"go.uber.org/zap"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/querybuilder"
@@ -12,6 +15,7 @@ import (
 
 type ProductRepository struct {
 	db *sql.DB
+	logger *zap.Logger
 }
 
 // Create reusable order builder for products (update)
@@ -20,8 +24,11 @@ var productOrderBuilder = querybuilder.NewSQLBuilder().
 	SetDefault("created_at", "DESC")
 
 // NewProductRepository creates a new product repository
-func NewProductRepository(db *sql.DB) *ProductRepository {
-	return &ProductRepository{db: db}
+func NewProductRepository(db *sql.DB, logger *zap.Logger) *ProductRepository {
+	return &ProductRepository{
+		db: db,
+	logger: logger,
+	}
 }
 
 // Create creates a new product
@@ -134,6 +141,7 @@ func (r *ProductRepository) GetAll(limit, offset int) ([]models.Product, int64, 
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -188,6 +196,7 @@ func (r *ProductRepository) GetActive(limit, offset int) ([]models.Product, int6
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -243,6 +252,7 @@ func (r *ProductRepository) List(ctx context.Context, filter *models.ProductFilt
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -301,6 +311,7 @@ func (r *ProductRepository) GetByCategory(categoryID int, limit, offset int) ([]
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -507,6 +518,7 @@ func (r *ProductRepository) Search(ctx context.Context, keyword string, page, li
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -564,6 +576,7 @@ func (r *ProductRepository) GetByPriceRange(minPrice, maxPrice float64, limit, o
 
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -608,6 +621,7 @@ func (r *ProductRepository) GetLowStock(threshold int, limit int) ([]models.Prod
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -660,6 +674,7 @@ func (r *ProductRepository) GetOutOfStock(limit, offset int) ([]models.Product, 
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -821,6 +836,7 @@ func (r *ProductRepository) GetAllWithFilters(filters map[string]interface{}, li
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -865,6 +881,7 @@ func (r *ProductRepository) GetFeatured(limit int) ([]models.Product, error) {
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -996,6 +1013,7 @@ func (r *ProductRepository) GetCategories(productID int) ([]models.Category, err
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -1069,6 +1087,7 @@ func (r *ProductRepository) GetProductsByMultipleCategories(categoryIDs []int, l
 	}
     defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
@@ -1129,6 +1148,7 @@ func (r *ProductRepository) GetProductsByCategory(ctx context.Context, categoryI
 	}
 	defer func() {
     if err := rows.Close(); err != nil {
+		log.Printf("failed to close rows: %v", err)
     }
 }()
 
