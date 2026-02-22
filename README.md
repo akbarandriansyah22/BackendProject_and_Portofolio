@@ -1,140 +1,134 @@
+<div align="center">
+
 # Backend & DevSecOps Portfolio
 
-This repository contains **three Golang-based backend projects** designed to demonstrate my capabilities in **backend engineering**, **clean architecture**, and **DevSecOps / CI/CD practices**.
+**Three production-minded Golang backend projects demonstrating backend engineering, clean architecture, and DevSecOps practices**
 
-All projects are structured with a **production-ready mindset**, focusing on maintainability, security, and automation rather than tutorial-style implementations.
+[![Go](https://img.shields.io/badge/Go-1.25.2-00ADD8?logo=go&logoColor=white)](https://golang.org/)
+[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/akbarandriansyah22/BackendProject_and_Portofolio/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
----
-
-## Project List
-
-1. **E-Commerce API (DevSecOps Project)**https://roadmap.sh/projects/ecommerce-api
-2. **Blogging Platform API**https://roadmap.sh/projects/blogging-platform-api
-3. **Task CLI Manager**https://roadmap.sh/projects/task-tracker
+</div>
 
 ---
 
-## 1. E-Commerce API – DevSecOps-Oriented Backend
+## Overview
 
-**Type**: Backend REST API with CI/CD and Security Automation
-**Tech Stack**:
+This repository contains three Golang-based backend projects built with a **production-ready mindset** — emphasizing maintainability, security, and automation rather than tutorial-style implementations. Each project addresses a different scope and complexity level, collectively demonstrating a range of backend and DevOps competencies.
 
-- Golang (Fiber)
-- PostgreSQL
-- Docker and Docker Compose
-- GitHub Actions
-- golangci-lint, GoSec, Trivy
+---
+
+## Projects
+
+| #   | Project                                                         | Type                          | Path                     |
+| --- | --------------------------------------------------------------- | ----------------------------- | ------------------------ |
+| 1   | [E-Commerce API](#1-e-commerce-api--devsecops-oriented-backend) | REST API + DevSecOps Pipeline | `e-commerce-api/`        |
+| 2   | [Blogging Platform API](#2-blogging-platform-api)               | REST API                      | `blogging-platform-api/` |
+| 3   | [Task CLI Manager](#3-task-cli-manager)                         | Command-Line Application      | `backend-task-cli/`      |
+
+---
+
+## 1. E-Commerce API — DevSecOps-Oriented Backend
+
+**Reference:** [roadmap.sh/projects/ecommerce-api](https://roadmap.sh/projects/ecommerce-api)
+
+**Tech Stack:** Go (Fiber), PostgreSQL, Docker, GitHub Actions, golangci-lint, GoSec, Trivy
 
 ### Overview
 
-The E-Commerce API is a backend service built using **Clean Architecture principles** and enhanced with a comprehensive **DevSecOps pipeline**. The project emphasizes code quality, application security, and automation throughout the development lifecycle.
+The E-Commerce API is a REST backend built with **Clean Architecture** principles and extended with a comprehensive **DevSecOps pipeline**. The project prioritizes code quality, application security, and lifecycle automation — from development to deployment.
 
-Core responsibilities of the API include:
-
-- Product management
-- Cart and order processing
-- Stock validation
-- Transaction handling
+Core domain responsibilities include product catalog management, cart and order processing, stock validation, and transaction handling.
 
 ### Architecture
 
-- Clean / Layered Architecture
-  - Handler (HTTP layer)
-  - Service (business logic)
-  - Repository (database access)
+The application is structured in three distinct layers with clear separation of concerns:
 
-- Environment-based configuration
-- Clear separation of concerns
+- **Handler** — HTTP routing, request parsing, and response formatting
+- **Service** — business logic and domain rules, independent of transport and persistence concerns
+- **Repository** — database access, SQL execution, and data mapping
 
-### DevSecOps Implementation
+Configuration is environment-based, loaded from `.env` at startup, with no hardcoded values in application code.
 
-The CI/CD pipeline is implemented using **GitHub Actions** and runs automatically on every push and pull request.
+### DevSecOps Pipeline
 
-The pipeline includes:
+The CI/CD pipeline is implemented in **GitHub Actions** and runs automatically on every push and pull request. The pipeline executes the following steps in order:
 
-- Dependency validation (`go mod tidy`, `go mod verify`)
-- Static code analysis using `golangci-lint`
-- SAST with GoSec (SARIF output)
-- SCA using Trivy (filesystem and container image scanning)
-- Docker image build and vulnerability scanning
-- Unit testing with race detection and coverage reporting
-- Binary build and artifact generation
+1. Dependency validation (`go mod tidy`, `go mod verify`)
+2. Static analysis with `golangci-lint`
+3. SAST with GoSec — output uploaded as SARIF to the GitHub Security tab
+4. Software Composition Analysis (SCA) with Trivy — filesystem and container image scans, also uploaded as SARIF
+5. Docker image build followed by image-level vulnerability scan
+6. Unit tests with race condition detection and coverage reporting
+7. Binary build with artifact upload (7-day retention)
 
-All security scan results are integrated into the **GitHub Security Dashboard** for centralized visibility.
+All security scan results are centralized in the **GitHub Security Dashboard** for continuous visibility.
 
-**Path**: `e-commerce-api/`
+**Path:** `e-commerce-api/`
 
 ---
 
 ## 2. Blogging Platform API
 
-**Type**: Backend REST API
-**Tech Stack**:
+**Reference:** [roadmap.sh/projects/blogging-platform-api](https://roadmap.sh/projects/blogging-platform-api)
 
-- Golang
-- PostgreSQL
+**Tech Stack:** Go, PostgreSQL
 
 ### Overview
 
-The Blogging Platform API is a RESTful backend service created to demonstrate **core backend development fundamentals** using Go and PostgreSQL.
-
-The project focuses on clean API design, consistent structure, and ease of maintenance. It is inspired by backend practice challenges and real-world CRUD use cases.
+The Blogging Platform API is a RESTful backend service demonstrating **core backend development fundamentals** — clean API design, consistent project structure, and straightforward maintainability. It is built around real-world CRUD use cases and serves as a foundation-level companion to the more infrastructure-heavy E-Commerce project.
 
 ### Features
 
-- CRUD operations for blog posts
+- Full CRUD operations for blog posts
 - Search and filtering via query parameters
-- Simple and maintainable project structure
+- Consistent response structure and error handling
 
-**Path**: `blogging-platform-api/`
+**Path:** `blogging-platform-api/`
 
 ---
 
 ## 3. Task CLI Manager
 
-**Type**: Command Line Application
-**Tech Stack**:
+**Reference:** [roadmap.sh/projects/task-tracker](https://roadmap.sh/projects/task-tracker)
 
-- Golang
+**Tech Stack:** Go
 
 ### Overview
 
-Task CLI Manager is a command-line application for task management, built using Go with a **layered and clean design approach**.
-
-This project demonstrates the ability to design non-HTTP applications while maintaining clear separation between business logic and data handling.
+Task CLI Manager is a command-line application for local task management, built using Go with a **layered design approach**. The project demonstrates the ability to apply clean architecture principles outside of HTTP contexts — maintaining separation between business logic and data persistence in a non-web application.
 
 ### Features
 
-- Create tasks
-- View all tasks
-- Update existing tasks
+- Create, view, update, and delete tasks
 - Mark tasks as completed
-- Delete tasks
-- Task statistics
+- Task statistics summary
 
-**Path**: `backend-task-cli/`
+**Path:** `backend-task-cli/`
 
 ---
 
 ## Skills Demonstrated
 
-- Backend development with Golang
-- Clean Architecture and layered design
-- RESTful API design
-- CI/CD automation using GitHub Actions
-- DevSecOps practices (SAST, SCA, container security)
-- Docker-based workflows
-- Secure coding principles
+- Backend development with Go
+- Clean Architecture and layered design patterns
+- RESTful API design and consistent response structures
+- CI/CD automation with GitHub Actions
+- DevSecOps practices — SAST, SCA, and container image security scanning
+- Docker-based build and deployment workflows
+- Secure coding principles and production hardening
 
 ---
 
 ## Contact
 
-For further discussion or project review:
-
-- GitHub: https://github.com/akbarandriansyah22
-- LinkedIn: https://www.linkedin.com/in/akbar-andriansyah-b3907322b/
+- **GitHub:** [github.com/akbarandriansyah22](https://github.com/akbarandriansyah22)
+- **LinkedIn:** [linkedin.com/in/akbar-andriansyah-b3907322b](https://www.linkedin.com/in/akbar-andriansyah-b3907322b/)
 
 ---
 
-This repository serves as a backend and DevSecOps portfolio, highlighting readiness for production-gra
+<div align="center">
+
+This repository serves as a backend and DevSecOps portfolio, reflecting readiness for production-grade engineering roles.
+
+</div>
