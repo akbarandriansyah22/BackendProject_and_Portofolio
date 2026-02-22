@@ -7,16 +7,23 @@ import (
 	"fmt"
 	"log"
 
+	"go.uber.org/zap"
+
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/models"
 )
 
 type CartRepository struct {
 	db *sql.DB
+	logger *zap.Logger
 }
 
+
 // NewCartRepository creates a new cart repository
-func NewCartRepository(db *sql.DB) *CartRepository {
-	return &CartRepository{db: db}
+func NewCartRepository(db *sql.DB, logger *zap.Logger) *CartRepository {
+	return &CartRepository{
+		db: db,
+		logger: logger,
+	}
 }
 
 // GetOrCreateCart gets existing cart or creates new one for user
