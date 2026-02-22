@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -17,55 +19,62 @@ import (
 )
 
 func main() {
-	// =======================
+	
 	// CONFIG
-	// =======================
+	
 	cfg := config.Load()
 
-	// =======================
+	
 	// LOGGER
-	// =======================
+
 	loggerObs := observability.NewZapLogger()
-	defer loggerObs.Sync()
+	defer func() {
+    if err := loggerObs.Sync(); err != nil {
+		log.Printf("failed to sync logger: %v", err)
+	 }
+}()
 	loggerObs.Info("starting e-commerce API")
 
-	// =======================
+
 	// PROMETHEUS METRICS
-	// =======================
+	
 	observability.InitMetrics()
 
-	// =======================
+	
 	// DATABASE
-	// =======================
+	
 	db, err := sql.Open("postgres", cfg.Database.DSN())
-	if err != nil {
-		loggerObs.Fatal("failed to connect database", err)
-	}
-	defer db.Close()
+if err != nil {
+    loggerObs.Fatal("failed to connect database", zap.Error(err))
+}
 
-	if err := db.Ping(); err != nil {
-		loggerObs.Fatal("database unreachable", err)
-	}
+if err := db.Ping(); err != nil {
+    loggerObs.Fatal("database unreachable", zap.Error(err))
+}
 
-	// =======================
+defer func() {
+    if err := db.Close(); err != nil {
+        loggerObs.Error("failed to close db", zap.Error(err))
+    }
+}()
+
 	// FIBER APP
-	// =======================
+
 	app := fiber.New(fiber.Config{
 		AppName: "E-Commerce API",
 	})
 
-	// =======================
 	// GLOBAL MIDDLEWARES
-	// =======================
+
 	app.Use(
 		recover.New(),
 		logger.New(),
 		cors.New(),
 	)
 
-	// =======================
-	// METRICS MIDDLEWARE (WAJIB SEBELUM ROUTES)
-	// =======================
+
+	// METRICS MIDDLEWARE 
+
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
@@ -100,14 +109,14 @@ func main() {
 		return err
 	})
 
-	// =======================
+	
 	// METRICS ENDPOINT
-	// =======================
+	
 	observability.RegisterMetricsEndpoint(app)
 
-	// =======================
+	
 	// HEALTH ENDPOINT
-	// =======================
+	
 	app.Get("/health", func(c *fiber.Ctx) error {
 		if err := db.Ping(); err != nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
@@ -124,9 +133,12 @@ func main() {
 		})
 	})
 
-	// =======================
+
 	// START SERVER
-	// =======================
-	log.Fatal(app.Listen(":" + cfg.Server.Port))
+
+	if err := app.Listen(":" + cfg.Server.Port); err != nil {
+	loggerObs.Fatal("failed to start server", zap.Error(err))
+}
+
 }
 
