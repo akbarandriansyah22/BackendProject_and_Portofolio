@@ -68,7 +68,7 @@ type AppConfig struct {
 func Load() *Config {
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️  No .env file found, using environment variables")
+		log.Println(" No .env file found, using environment variables")
 	}
 
 	return &Config{
@@ -134,7 +134,7 @@ if cfg.JWT.Secret == "" {
 
 	if cfg.Server.Environment == "production" {
 		if cfg.Database.SSLMode == "disable" {
-			log.Println("⚠️  Warning: SSL is disabled in production!")
+			log.Println("  Warning: SSL is disabled in production!")
 		}
 	}
 
@@ -143,7 +143,7 @@ if cfg.JWT.Secret == "" {
 func MustLoad() *Config {
 	cfg := Load()
 	if err := cfg.validateSecrets(); err != nil {
-		log.Fatalf("🚨 FATAL CONFIG ERROR: %v\n\nPastikan .env sudah diisi dengan benar.", err)
+		log.Fatalf(" FATAL CONFIG ERROR: %v\n\nPastikan .env sudah diisi dengan benar.", err)
 	}
 	return cfg
 }

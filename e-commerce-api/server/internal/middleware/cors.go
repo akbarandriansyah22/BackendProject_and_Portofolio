@@ -11,7 +11,7 @@ import (
 func CORS() fiber.Handler {
 	return cors.New(cors.Config{
 		// Allow all origins (wildcard)
-		// ⚠️ DEVELOPMENT ONLY! Ganti di production!
+		//  DEVELOPMENT ONLY! Ganti di production!
 		AllowOrigins: "*",
 
 		// Allow common HTTP methods

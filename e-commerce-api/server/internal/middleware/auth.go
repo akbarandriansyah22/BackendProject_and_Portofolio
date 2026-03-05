@@ -103,3 +103,17 @@ func RequireRole(logger observability.Logger, allowedRoleIDs ...int) fiber.Handl
 		})
 	}
 }
+
+// HASROLE
+func HasRole(c *fiber.Ctx, roleIDs ...int) bool {
+	roleID, ok := c.Locals("roleID").(int)
+	if !ok || roleID == 0 {
+		return false
+	}
+	for _, id := range roleIDs {
+		if roleID == id {
+			return true
+		}
+	}
+	return false
+}

@@ -2,6 +2,7 @@ package observability
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -80,7 +81,7 @@ var (
 			Name: "app_info",
 			Help: "Application version and build information",
 		},
-		[]string{"version", "environment", "build_time"},
+		[]string{"version"},
 	)
 )
 
@@ -88,7 +89,7 @@ var (
 // INIT METRICS
 // ======================
 
-func InitMetrics() {
+func InitMetrics(version string) {
 	prometheus.MustRegister(
 		// HTTP Metrics
 		HttpRequestsTotal,
@@ -104,29 +105,59 @@ func InitMetrics() {
 	)
 
 	// Set app info (gauge with static values)
-	AppInfo.WithLabelValues("1.0.0", "staging", "unknown").Set(1)
+	AppInfo.WithLabelValues(version).Set(1)
 }
 
 // ======================
 // /metrics ENDPOINT
 // ======================
 
-func RegisterMetricsEndpoint(app *fiber.App) {
-	app.Get("/metrics", func(c *fiber.Ctx) error {
-		// Set content type
-		c.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8; escaping=underscores")
+func RegisterMetricsEndpoint(app *fiber.App, metricsToken string) { // ← tambah parameter
+    app.Get("/metrics", func(c *fiber.Ctx) error {
 
-		// Directly call promhttp.Handler
-		// Create a custom http.ResponseWriter that writes to Fiber
-		encoder := &metricsEncoder{bodyBuf: []byte{}}
+        // === TAMBAH BLOK AUTH INI ===
+        authHeader := c.Get("Authorization")
+        if authHeader == "" {
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+                "error": "unauthorized",
+            })
+        }
 
-		// Get the default handler and serve it
-		handler := promhttp.Handler()
-		handler.ServeHTTP(encoder, &http.Request{})
+        parts := strings.SplitN(authHeader, " ", 2)
+        if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+            return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+                "error": "unauthorized",
+            })
+        }
 
-		// Send the response
-		return c.Send(encoder.bodyBuf)
-	})
+        if !secureCompare(parts[1], metricsToken) { // ← timing-safe compare
+            return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+                "error": "forbidden",
+            })
+        }
+        // === AKHIR BLOK AUTH ===
+
+        c.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8; escaping=underscores")
+
+        encoder := &metricsEncoder{bodyBuf: []byte{}}
+        handler := promhttp.Handler()
+        handler.ServeHTTP(encoder, &http.Request{})
+
+        return c.Send(encoder.bodyBuf)
+    })
+}
+
+// === TAMBAH FUNGSI BARU INI DI BAWAH ===
+// secureCompare mencegah timing attack — tidak pakai == biasa
+func secureCompare(a, b string) bool {
+    if len(a) != len(b) {
+        return false
+    }
+    result := byte(0)
+    for i := 0; i < len(a); i++ {
+        result |= a[i] ^ b[i]
+    }
+    return result == 0
 }
 
 // metricsEncoder implements http.ResponseWriter

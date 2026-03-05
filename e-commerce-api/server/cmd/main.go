@@ -16,6 +16,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/config"
+	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/middleware"
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/observability"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	
 	// CONFIG
 	
-	cfg := config.Load()
+	cfg := config.MustLoad()
 
 	
 	// LOGGER
@@ -62,8 +63,12 @@ defer func() {
 	// FIBER APP
 
 	app := fiber.New(fiber.Config{
-		AppName: "E-Commerce API",
-	})
+    AppName:      "E-Commerce API",
+    ReadTimeout:  cfg.Server.ReadTimeout,  
+    WriteTimeout: cfg.Server.WriteTimeout, 
+    IdleTimeout:  60 * time.Second,
+    BodyLimit:    2 * 1024 * 1024,        
+})
 
 	// GLOBAL MIDDLEWARES
 
@@ -117,6 +122,24 @@ defer func() {
 	
 	observability.RegisterMetricsEndpoint(app, metricsToken)
 
+	// RATE LIMITERS
+authRateLimiter := middleware.NewRateLimitMiddleware(
+    middleware.DefaultAuthRateLimitConfig(loggerObs),
+)
+apiRateLimiter := middleware.NewRateLimitMiddleware(
+    middleware.DefaultAPIRateLimitConfig(loggerObs),
+)
+
+// Pasang ke route groups
+auth := app.Group("/auth", authRateLimiter)
+_ = auth // daftarkan handler di sini: auth.Post("/login", ...)
+
+api := app.Group("/api",
+    middleware.Auth(cfg.JWT.Secret, loggerObs),
+    apiRateLimiter,
+)
+_ = api // daftarkan handler di sini: api.Get("/products", ...)
+
 	
 	// HEALTH ENDPOINT
 	
@@ -130,9 +153,6 @@ defer func() {
 
 		return c.JSON(fiber.Map{
 			"status":      "ok",
-			"db":          "ok",
-			"environment": cfg.Server.Environment,
-			"timestamp":   time.Now().UTC(),
 		})
 	})
 

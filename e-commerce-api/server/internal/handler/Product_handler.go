@@ -221,12 +221,11 @@ func (h *ProductHandler) UpdateStock(c *fiber.Ctx) error {
 func (h *ProductHandler) handleError(c *fiber.Ctx, err error) error {
 	switch err.Error() {
 	case "product not found":
-		return fiber.NewError(fiber.StatusNotFound, err.Error())
+		// Aman di-forward ke client — ini user-facing message, bukan internal detail
+		return fiber.NewError(fiber.StatusNotFound, "product not found")
 	default:
+		// Log error internal, tapi jangan expose detail ke client
 		h.logger.Error("product handler error", err)
-		return fiber.NewError(
-			fiber.StatusInternalServerError,
-			"internal server error",
-		)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 }
