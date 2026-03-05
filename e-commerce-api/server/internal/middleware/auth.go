@@ -9,6 +9,13 @@ import (
 	"github.com/akbarandriansyah22/BackendProject_and_Portofolio/e-commerce-api/server/internal/security"
 )
 
+// ROLE CONSTANTS
+
+const (
+	RoleAdmin    = 1
+	RoleCustomer = 2
+)
+
 // Auth middleware (JWT required)
 func Auth(jwtSecret string, logger observability.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -64,32 +71,35 @@ func GetUserID(c *fiber.Ctx) (int, bool) {
 }
 
 // RequireRole middleware (RBAC)
-func RequireRole(requiredRoleID int, logger observability.Logger) fiber.Handler {
+func RequireRole(logger observability.Logger, allowedRoleIDs ...int) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		roleID, ok := c.Locals("roleID").(int)
-		if !ok {
-			logger.Warn("role_check_failed", "roleID not found ip=%s", c.IP())
+
+		// Validasi: roleID harus ada dan bukan 0
+		if !ok || roleID == 0 {
+			logger.Warn("role_check_failed", "roleID not found or invalid ip=%s", c.IP())
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"success": false,
 				"error":   "Forbidden: insufficient permissions",
 			})
 		}
 
-		if roleID != requiredRoleID {
-			logger.Warn(
-				"role_check_failed",
-				"user roleID=%d required=%d ip=%s",
-				roleID,
-				requiredRoleID,
-				c.IP(),
-			)
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"success": false,
-				"error":   "Forbidden: insufficient permissions",
-			})
+		// Cek apakah roleID user ada di list yang diizinkan
+		for _, allowed := range allowedRoleIDs {
+			if roleID == allowed {
+				logger.Info("role_check_success", "roleID=%d ip=%s", roleID, c.IP())
+				return c.Next()
+			}
 		}
 
-		logger.Info("role_check_success", "roleID=%d ip=%s", roleID, c.IP())
-		return c.Next()
+		logger.Warn(
+			"role_check_failed",
+			"user roleID=%d not in allowed=%v ip=%s",
+			roleID, allowedRoleIDs, c.IP(),
+		)
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"success": false,
+			"error":   "Forbidden: insufficient permissions",
+		})
 	}
 }

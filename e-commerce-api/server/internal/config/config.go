@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -87,7 +88,7 @@ func Load() *Config {
 			Environment:  getEnv("ENVIRONMENT", "development"),
 		},
 		JWT: JWTConfig{
-			Secret:     getEnv("JWT_SECRET", "your-secret-key-change-this"),
+			Secret:     os.Getenv("JWT_SECRET"),
 			Expiration: getDurationEnv("JWT_EXPIRATION_HOURS", 24) * time.Hour,
 		},
 		CORS: CORSConfig{
@@ -110,12 +111,26 @@ func LoadWithValidation() (*Config, error) {
 
 	// Validate required fields
 	if cfg.Database.Password == "" {
-		log.Println("⚠️  Warning: DB_PASSWORD is empty")
+		log.Println("  Warning: DB_PASSWORD is empty")
 	}
 
-	if cfg.JWT.Secret == "your-secret-key-change-this" {
-		log.Println("⚠️  Warning: Using default JWT_SECRET. Please change in production!")
-	}
+	knownWeak := []string{
+    "your-secret-key",
+    "your-secret-key-change-this",
+    "secret",
+    "password",
+    "changeme",
+    "jwt-secret",
+}
+if cfg.JWT.Secret == "" {
+    log.Println("  Warning: JWT_SECRET is empty!")
+} else {
+    for _, weak := range knownWeak {
+        if cfg.JWT.Secret == weak {
+            log.Printf("  Warning: JWT_SECRET menggunakan known-weak value: '%s'", weak)
+        }
+    }
+}
 
 	if cfg.Server.Environment == "production" {
 		if cfg.Database.SSLMode == "disable" {
@@ -125,7 +140,65 @@ func LoadWithValidation() (*Config, error) {
 
 	return cfg, nil
 }
+func MustLoad() *Config {
+	cfg := Load()
+	if err := cfg.validateSecrets(); err != nil {
+		log.Fatalf("🚨 FATAL CONFIG ERROR: %v\n\nPastikan .env sudah diisi dengan benar.", err)
+	}
+	return cfg
+}
 
+// validateSecrets memeriksa semua secret kritis saat startup.
+func (c *Config) validateSecrets() error {
+	knownWeakSecrets := []string{
+		"your-secret-key",
+		"your-secret-key-change-this",
+		"ecommerce-super-secret-jwt-key-2025-change-in-production",
+		"secret",
+		"password",
+		"changeme",
+		"jwt-secret",
+	}
+
+	// Validasi JWT_SECRET
+	if c.JWT.Secret == "" {
+		return fmt.Errorf("JWT_SECRET belum di-set di .env")
+	}
+	if len(c.JWT.Secret) < 32 {
+		return fmt.Errorf("JWT_SECRET terlalu pendek (%d karakter, minimal 32). "+
+			"Generate dengan: openssl rand -hex 32", len(c.JWT.Secret))
+	}
+	for _, weak := range knownWeakSecrets {
+		if c.JWT.Secret == weak {
+			return fmt.Errorf("JWT_SECRET menggunakan known-weak value. "+
+				"Generate dengan: openssl rand -hex 32")
+		}
+	}
+
+	// Validasi METRICS_TOKEN
+	metricsToken := os.Getenv("METRICS_TOKEN")
+	if metricsToken == "" {
+		return fmt.Errorf("METRICS_TOKEN belum di-set di .env")
+	}
+	if len(metricsToken) < 32 {
+		return fmt.Errorf("METRICS_TOKEN terlalu pendek (%d karakter, minimal 32). "+
+			"Generate dengan: openssl rand -hex 32", len(metricsToken))
+	}
+
+	// Validasi DB_PASSWORD
+	if c.Database.Password == "" {
+		return fmt.Errorf("DB_PASSWORD belum di-set di .env")
+	}
+
+	// Validasi khusus production
+	if c.Server.Environment == "production" {
+		if c.Database.SSLMode == "disable" {
+			return fmt.Errorf("DB_SSLMODE tidak boleh 'disable' di production. Gunakan 'require'")
+		}
+	}
+
+	return nil
+}
 // IsDevelopment checks if running in development mode
 func (c *Config) IsDevelopment() bool {
 	return c.Server.Environment == "development"

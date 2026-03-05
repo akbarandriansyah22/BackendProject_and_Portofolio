@@ -8,7 +8,7 @@ import (
 )
 
 // HashPassword hashes a plain text password using bcrypt
-// Fungsi ini untuk HASH password sebelum disimpan ke database
+
 // Input: password plaintext (misal: "password123")
 // Output: hashed password (misal: "$2a$10$N9qo8uLOickgx2ZMRZoMye...")
 func HashPassword(password string) (string, error) {

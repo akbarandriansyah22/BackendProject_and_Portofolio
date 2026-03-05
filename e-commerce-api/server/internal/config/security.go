@@ -1,5 +1,7 @@
 package config
 
+import "os"
+
 // SecurityConfig holds all security-related configuration
 type SecurityConfig struct {
 	JWTSecret         string
@@ -15,7 +17,7 @@ type SecurityConfig struct {
 // NewSecurityConfig returns default security configuration
 func NewSecurityConfig() *SecurityConfig {
 	return &SecurityConfig{
-		JWTSecret:         "your-secret-key",
+		JWTSecret:         os.Getenv("JWT_SECRET"),
 		JWTExpiration:     86400, // 24 hours
 		PasswordMinLength: 8,
 		PasswordMaxLength: 128,

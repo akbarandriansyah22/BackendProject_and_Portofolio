@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -38,7 +39,7 @@ func main() {
 
 	// PROMETHEUS METRICS
 	
-	observability.InitMetrics()
+	observability.InitMetrics(cfg.App.Version)
 
 	
 	// DATABASE
@@ -111,8 +112,10 @@ defer func() {
 
 	
 	// METRICS ENDPOINT
+
+	metricsToken := os.Getenv("METRICS_TOKEN") 
 	
-	observability.RegisterMetricsEndpoint(app)
+	observability.RegisterMetricsEndpoint(app, metricsToken)
 
 	
 	// HEALTH ENDPOINT
