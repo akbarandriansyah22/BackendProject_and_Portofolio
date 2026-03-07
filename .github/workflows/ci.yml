@@ -102,15 +102,14 @@ jobs:
 
       # =====================
       # Trivy – Image Scan
-      # FIX: Ganti @0.33.1 → @0.30.0
       # =====================
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.30.0
-        with:
-          image-ref: e-commerce-api:ci
-          format: sarif
-          output: trivy-image.sarif
-          ignore-unfixed: true
+        run: |
+          trivy image \
+            --format sarif \
+            --output trivy-image.sarif \
+            --ignore-unfixed \
+            e-commerce-api:ci
 
       - name: Upload Trivy Image SARIF
         if: always()
@@ -121,22 +120,19 @@ jobs:
 
       # =====================
       # SBOM
-      # FIX: Ganti @0.33.1 → @0.30.0
       # =====================
       - name: Generate SBOM
-        uses: aquasecurity/trivy-action@0.30.0
-        with:
-          scan-type: fs
-          scan-ref: e-commerce-api
-          format: cyclonedx
-          output: sbom.json
+        run: |
+          trivy fs \
+            --format cyclonedx \
+            --output sbom.json \
+            e-commerce-api
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
-
       # =====================
       # Test
       # =====================
