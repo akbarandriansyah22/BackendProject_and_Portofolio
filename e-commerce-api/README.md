@@ -55,8 +55,10 @@ This project was built to demonstrate practical proficiency in backend engineeri
 - **Full DevSecOps Pipeline** — Gitleaks (secrets), GoSec (SAST), Trivy (filesystem + container image), and SBOM generation automated on every push; SARIF reports surfaced in the GitHub Security tab
 - **Observability Stack** — Prometheus metrics endpoint, pre-provisioned Grafana dashboards, Loki log aggregation via Promtail, and Alertmanager with configurable routing
 - **Container-Ready** — multi-stage Docker build producing a minimal Alpine-based image, automatically published to GitHub Container Registry (GHCR) with semantic tags on every push
-- **Role-Based Access Control** — JWT authentication with RBAC enforced at the middleware layer, supporting Admin and Customer roles
+- **Role-Based Access Control** — JWT authentication with RBAC enforced at the middleware layer, supporting Admin and Customer roles with multi-role support and startup secret validation
 - **Structured Logging** — `go.uber.org/zap` for high-performance, structured, leveled logging across all application layers
+- **Runtime Security Hardening** — Fiber configured with `ReadTimeout`, `WriteTimeout`, `IdleTimeout`, and 2MB `BodyLimit` to prevent Slowloris and OOM DoS attacks; all containers run as non-root user (`appuser`) with `no-new-privileges`
+- **Authenticated Metrics Endpoint** — `/metrics` protected with Bearer token authentication and timing-safe comparison (`secureCompare`) to prevent brute-force and timing attacks
 
 ---
 
@@ -86,7 +88,7 @@ This project was built to demonstrate practical proficiency in backend engineeri
 | Gitleaks             | Secret and credential scanning                        |
 | golangci-lint v2.7.2 | Static analysis and linting                           |
 | GoSec v2.22.11       | Go-specific SAST with SARIF output                    |
-| Trivy v0.33.1        | Filesystem and container image vulnerability scanning |
+| Trivy v0.69.3        | Filesystem and container image vulnerability scanning |
 | CycloneDX            | Software Bill of Materials (SBOM) generation          |
 | Prometheus           | Metrics collection and alerting                       |
 | Grafana              | Metrics visualization and dashboards                  |
@@ -166,7 +168,7 @@ e-commerce-api/
 |       |   +-- category_handler.go
 |       |   +-- order_handler.go
 |       |   +-- Product_handler.go
-|       +-- middleware/             # JWT auth, CORS, request logger middleware
+|       +-- middleware/             # JWT auth, CORS, rate limiter, request logger middleware
 |       +-- models/                 # Domain models, DTOs, request/response structs
 |       +-- observability/          # Logger interface, Zap implementation, Prometheus metrics
 |       +-- ports/                  # Repository and service interface definitions
@@ -177,7 +179,7 @@ e-commerce-api/
 |       +-- test/                   # Service-level unit tests and mock implementations
 |       +-- utils/                  # HTTP response helpers, pagination utilities
 |
-+-- Dockerfile                      # Multi-stage build (builder + alpine runtime)
++-- Dockerfile                      # Multi-stage build (builder + alpine:3.20.3 runtime, non-root)
 +-- go.mod
 +-- go.sum
 +-- README.md
@@ -263,6 +265,7 @@ Run the provided SQL schema files using `psql` or your preferred migration tool.
 ```bash
 cp .env.example .env
 # Open .env and fill in your local values
+# Generate secrets with: openssl rand -hex 32
 ```
 
 **6. Start the application**
@@ -281,10 +284,7 @@ Expected response:
 
 ```json
 {
-  "status": "ok",
-  "db": "ok",
-  "environment": "development",
-  "timestamp": "2026-01-01T00:00:00Z"
+  "status": "ok"
 }
 ```
 
@@ -309,8 +309,11 @@ DB_NAME=ecommerce
 DB_SSLMODE=disable
 
 # JWT
-JWT_SECRET=replace-with-a-strong-random-secret
+JWT_SECRET=replace-with-a-strong-random-secret   # min 32 chars, generate: openssl rand -hex 32
 JWT_EXPIRATION_HOURS=24
+
+# Metrics
+METRICS_TOKEN=replace-with-strong-random-token   # generate: openssl rand -hex 32
 
 # CORS
 CORS_ALLOWED_ORIGINS=*
@@ -321,7 +324,7 @@ APP_VERSION=1.0.0
 LOG_LEVEL=info
 ```
 
-> **Security Note:** Never commit `.env` to version control. In production, inject secrets via your platform's secrets manager and set `DB_SSLMODE=require`.
+> **Security Note:** Never commit `.env` to version control. Generate `JWT_SECRET` and `METRICS_TOKEN` with `openssl rand -hex 32`. The application will refuse to start if these are missing or use known-weak values. In production, inject secrets via your platform's secrets manager and set `DB_SSLMODE=require`.
 
 ---
 
@@ -416,10 +419,10 @@ Paginated responses include a `meta` object:
 
 ### System
 
-| Method | Endpoint   | Description                           |
-| ------ | ---------- | ------------------------------------- |
-| GET    | `/health`  | Application and database health check |
-| GET    | `/metrics` | Prometheus metrics endpoint           |
+| Method | Endpoint   | Description                                         |
+| ------ | ---------- | --------------------------------------------------- |
+| GET    | `/health`  | Application and database health check               |
+| GET    | `/metrics` | Prometheus metrics endpoint (Bearer token required) |
 
 ---
 
@@ -452,7 +455,7 @@ Authorization: Bearer <token>
 | 1       | Admin    | Full access to all endpoints, including all admin management routes   |
 | 2       | Customer | Access to own profile, cart, and orders; all public catalog endpoints |
 
-Authorization is enforced by the `RequireRole()` middleware, which validates the `role_id` claim from the JWT against the permission requirement defined per route group.
+Authorization is enforced by the `RequireRole()` middleware, which supports multiple allowed role IDs per route group and validates that `role_id` is a non-zero value before allowing access.
 
 ---
 
@@ -467,16 +470,16 @@ Checkout -> Setup Go 1.25.2 (with module cache)
          -> Dependency verification (go mod tidy / download / verify)
          -> Secret scanning          (Gitleaks)
          -> Static analysis          (golangci-lint v2.7.2)
-         -> SAST                     (GoSec v2.22.11  ->  gosec.sarif)
-         -> Filesystem scan          (Trivy           ->  trivy-fs.sarif)
+         -> SAST                     (GoSec v2.22.11    ->  gosec.sarif)
+         -> Filesystem scan          (Trivy v0.69.3     ->  trivy-fs.sarif)
          -> Build Docker image       (e-commerce-api:ci)
-         -> Container image scan     (Trivy           ->  trivy-image.sarif)
-         -> SBOM generation          (CycloneDX       ->  sbom.json artifact)
+         -> Container image scan     (Trivy v0.69.3     ->  trivy-image.sarif)
+         -> SBOM generation          (CycloneDX         ->  sbom.json artifact)
          -> Run tests                (go test -v -race -coverprofile)
-         -> Build binary             (go build        ->  bin/ecommerce-api artifact, 7-day retention)
+         -> Build binary             (go build          ->  bin/ecommerce-api artifact, 7-day retention)
 ```
 
-SARIF reports from GoSec and Trivy are automatically uploaded to the **GitHub Security tab** for centralized vulnerability tracking.
+SARIF reports from GoSec and Trivy are automatically uploaded to the **GitHub Security tab** for centralized vulnerability tracking. Trivy is installed directly from GitHub Releases (`v0.69.3`) for reproducible, version-pinned builds.
 
 ### Continuous Deployment (`cd.yml`)
 
@@ -498,7 +501,7 @@ Tags published on each run:
 
 ### Prometheus Metrics
 
-The API exposes application metrics at the `/metrics` endpoint. Key custom metrics:
+The API exposes application metrics at the `/metrics` endpoint (Bearer token required). Key custom metrics:
 
 | Metric                          | Type      | Labels               | Description                                    |
 | ------------------------------- | --------- | -------------------- | ---------------------------------------------- |
@@ -509,7 +512,7 @@ The API exposes application metrics at the `/metrics` endpoint. Key custom metri
 | `http_response_size_bytes`      | Histogram | method, path, status | Outgoing response payload size                 |
 | `db_connections_active`         | Gauge     | —                    | Currently active database connections          |
 | `db_connection_errors_total`    | Counter   | reason               | Database connection failures by reason         |
-| `app_info`                      | Gauge     | version, environment | Static application metadata                    |
+| `app_info`                      | Gauge     | version              | Static application version metadata            |
 
 ### Grafana Dashboard
 
@@ -580,8 +583,8 @@ docker build -t e-commerce-api:latest ./e-commerce-api
 
 The `Dockerfile` uses a **multi-stage build**:
 
-1. **Builder stage** — uses `golang:1.25-alpine` to compile the binary with CGO disabled (`CGO_ENABLED=0`) and Linux target
-2. **Runtime stage** — copies only the compiled binary and CA certificates into a minimal `alpine:latest` image
+1. **Builder stage** — uses `golang:1.25-alpine` to compile the binary with CGO disabled (`CGO_ENABLED=0`), `-trimpath`, and `-ldflags="-s -w"` for a stripped, path-clean binary
+2. **Runtime stage** — copies only the compiled binary and CA certificates into a minimal `alpine:3.20.3` image; runs as non-root user `appuser` with `HEALTHCHECK` configured
 
 The resulting image is typically under 20MB and contains no Go toolchain, build tools, or source code.
 
@@ -594,7 +597,8 @@ docker run -p 8080:8080 \
   -e DB_USER=postgres \
   -e DB_PASSWORD=yourpassword \
   -e DB_NAME=ecommerce \
-  -e JWT_SECRET=your-secret \
+  -e JWT_SECRET=your-secret-min-32-chars \
+  -e METRICS_TOKEN=your-metrics-token-min-32-chars \
   -e ENVIRONMENT=production \
   e-commerce-api:latest
 ```
@@ -611,30 +615,49 @@ docker pull ghcr.io/akbarandriansyah22/backendproject_and_portofolio/e-commerce-
 
 ### Implemented Measures
 
-| Category              | Control                   | Implementation Detail                                           |
-| --------------------- | ------------------------- | --------------------------------------------------------------- |
-| Authentication        | JWT token signing         | HMAC-SHA256, configurable expiration via `JWT_EXPIRATION_HOURS` |
-| Password storage      | Bcrypt hashing            | `golang.org/x/crypto/bcrypt` with cost factor 10                |
-| Authorization         | Role-based access control | `RequireRole()` middleware enforced per route group             |
-| Input validation      | Request validation        | Explicit field validation in handler and service layers         |
-| SQL injection         | Parameterized queries     | `database/sql` `$N` placeholders for all data queries           |
-| SQL injection         | Dynamic query builder     | Whitelist-based `SQLBuilder` for ORDER BY and WHERE clauses     |
-| Secret scanning       | Gitleaks                  | Automated on every commit in CI, fails the build on detection   |
-| SAST                  | GoSec                     | Scans Go source for known vulnerability patterns, SARIF output  |
-| Dependency scanning   | Trivy filesystem          | Scans Go module graph for known CVEs                            |
-| Container scanning    | Trivy image scan          | Scans the built Docker image layer by layer for CVEs            |
-| SBOM                  | CycloneDX                 | Generated on every CI run, uploaded as a build artifact         |
-| Cross-origin requests | Fiber CORS middleware     | Configurable allowed origins per environment                    |
-| Panic recovery        | Fiber recover middleware  | Prevents server crashes from unhandled runtime panics           |
+| Category              | Control                   | Implementation Detail                                                                                                              |
+| --------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication        | JWT token signing         | HMAC-SHA256, configurable expiration via `JWT_EXPIRATION_HOURS`                                                                    |
+| Password storage      | Bcrypt hashing            | `golang.org/x/crypto/bcrypt` with cost factor 10                                                                                   |
+| Authorization         | Role-based access control | `RequireRole()` middleware with multi-role support, `roleID != 0` validation, and `RoleAdmin`/`RoleCustomer` constants             |
+| Input validation      | Request validation        | Explicit field validation in handler and service layers                                                                            |
+| SQL injection         | Parameterized queries     | `database/sql` `$N` placeholders for all data queries                                                                              |
+| SQL injection         | Dynamic query builder     | Whitelist-based `SQLBuilder` for ORDER BY and WHERE clauses                                                                        |
+| Secret scanning       | Gitleaks                  | Automated on every commit in CI, fails the build on detection                                                                      |
+| SAST                  | GoSec                     | Scans Go source for known vulnerability patterns, SARIF output                                                                     |
+| Dependency scanning   | Trivy filesystem          | Scans Go module graph for known CVEs                                                                                               |
+| Container scanning    | Trivy image scan          | Scans the built Docker image layer by layer for CVEs                                                                               |
+| SBOM                  | CycloneDX                 | Generated on every CI run, uploaded as a build artifact                                                                            |
+| Cross-origin requests | Fiber CORS middleware     | `CORS_ALLOWED_ORIGINS` read from env var — not hardcoded wildcard                                                                  |
+| Panic recovery        | Fiber recover middleware  | Prevents server crashes from unhandled runtime panics                                                                              |
+| Rate limiting         | Token bucket algorithm    | `NewRateLimiterWithCleanup()` active on `/auth/*` (10 req/min per IP) and `/api/*` (60 req/min per userID) with background cleanup |
+| Request timeouts      | Fiber config              | `ReadTimeout: 10s`, `WriteTimeout: 10s`, `IdleTimeout: 60s` — prevents Slowloris attack                                            |
+| Request size limit    | Fiber BodyLimit           | 2MB hard limit on all request bodies — prevents OOM DoS                                                                            |
+| Metrics auth          | Bearer token              | `/metrics` protected with bearer token and timing-safe `secureCompare()` to prevent timing attacks                                 |
+| Non-root container    | Docker USER directive     | Container runs as `appuser` (non-root), binary has `chmod 550` and `chown appuser`                                                 |
+| Startup validation    | config.MustLoad()         | Application refuses to start if `JWT_SECRET`, `METRICS_TOKEN`, or `DB_PASSWORD` are missing or use known-weak values               |
 
 ### Production Hardening Checklist
 
+**Already implemented:**
+
+- ✅ Non-root container user (`appuser`) with `chmod 550`
+- ✅ Alpine image pinned to specific version (`alpine:3.20.3`)
+- ✅ `JWT_SECRET` validated at startup — minimum 32 characters, rejects known-weak values
+- ✅ `METRICS_TOKEN` required at startup — `/metrics` protected with bearer token
+- ✅ Rate limiter active on all public endpoints (`/auth/*` and `/api/*`)
+- ✅ Request timeouts and body limit explicitly configured in Fiber
+- ✅ CORS configured from env var, not hardcoded wildcard
+- ✅ `/health` endpoint does not expose environment name or internal details
+- ✅ `HEALTHCHECK` directive in Dockerfile for container orchestration
+- ✅ Build binary stripped with `-trimpath -ldflags="-s -w"` to remove path information
+
+**Required before production deployment:**
+
 - Set `DB_SSLMODE=require` and provide valid TLS certificates for all database connections
-- Replace `JWT_SECRET` with a cryptographically random minimum 256-bit key
-- Inject all secrets at runtime via a secrets manager (HashiCorp Vault, AWS Secrets Manager, or GCP Secret Manager) — never via environment files
-- Enable and configure `RateLimiter` in `server/internal/security/rate_limit.go` for all public endpoints
+- Inject all secrets via a secrets manager (HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager) — never via `.env` files
 - Configure Alertmanager receivers with production notification channels (PagerDuty, Slack, email)
-- Terminate TLS at the load balancer or reverse proxy (NGINX, Caddy, AWS ALB) rather than in the application
+- Terminate TLS at the load balancer or reverse proxy (NGINX, Caddy, AWS ALB)
 - Enable automated PostgreSQL backups with point-in-time recovery (PITR)
 
 ---
