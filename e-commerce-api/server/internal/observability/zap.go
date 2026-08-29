@@ -15,6 +15,16 @@ func NewZapLogger() Logger {
 	return &ZapLogger{logger: l}
 }
 
+// NewZapLoggerFrom wraps an existing zap logger.
+func NewZapLoggerFrom(l *zap.Logger) Logger {
+	return &ZapLogger{logger: l}
+}
+
+// Zap returns the underlying zap logger for repositories that require it.
+func (zl *ZapLogger) Zap() *zap.Logger {
+	return zl.logger
+}
+
 // Log logs a message at the specified level
 func (zl *ZapLogger) Log(level Level, msg string, args ...interface{}) {
 	switch level {

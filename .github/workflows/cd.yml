@@ -1,8 +1,6 @@
-name: Continuous Deployment (Staging)
+name: Continuous Deployment (GHCR)
 
 on:
-  push:
-    branches: ["main"]
   workflow_run:
     workflows: ["Go CI + DevSecOps Pipeline"]
     types: [completed]
@@ -17,16 +15,15 @@ env:
   IMAGE_NAME: akbarandriansyah22/backendproject_and_portofolio/e-commerce-api
 
 jobs:
-  deploy:
-    if: |
-      github.event_name == 'push' || 
-      github.event.workflow_run.conclusion == 'success'
-
+  publish:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,7 +43,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
-            type=raw,value=staging
             type=raw,value=latest
 
       - name: Build and push Docker image

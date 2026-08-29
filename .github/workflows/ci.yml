@@ -3,7 +3,15 @@ name: Go CI + DevSecOps Pipeline
 on:
   push:
     branches: ["main"]
+    paths:
+      - "e-commerce-api/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/cd.yml"
   pull_request:
+    paths:
+      - "e-commerce-api/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/cd.yml"
 
 permissions:
   contents: read
@@ -14,24 +22,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =====================
-      # Checkout
-      # =====================
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # =====================
-      # Setup Go
-      # =====================
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.25.2"
           cache: true
+          cache-dependency-path: e-commerce-api/go.sum
 
-      # =====================
-      # Dependencies
-      # =====================
       - name: Download dependencies
         working-directory: e-commerce-api
         run: |
@@ -39,15 +39,14 @@ jobs:
           go mod download
           go mod verify
 
-      # =====================
-      # Secret Scanning
-      # =====================
       - name: Secret scanning (Gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        run: |
+          set -euo pipefail
+          VERSION=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks detect --source . --no-git --verbose
 
-      # =====================
-      # Lint
-      # =====================
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
@@ -55,25 +54,23 @@ jobs:
           working-directory: e-commerce-api
           args: --timeout=5m
 
-      # =====================
-      # SAST – GoSec
-      # =====================
       - name: Run GoSec (SAST)
         working-directory: e-commerce-api
         run: |
+          set -euo pipefail
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.11
-          gosec -fmt sarif -out gosec.sarif ./... || true
+          # Fail the job on HIGH (and CRITICAL) findings. Medium/low are omitted.
+          gosec -severity high -fmt text ./...
+          gosec -severity high -fmt sarif -out gosec.sarif ./...
 
       - name: Upload GoSec SARIF
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: e-commerce-api/gosec.sarif
           category: gosec
 
-      # =====================
-      # Trivy – Filesystem Scan
-      # =====================
       - name: Install Trivy
         run: |
           wget -qO- https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz \
@@ -89,20 +86,16 @@ jobs:
 
       - name: Upload Trivy FS SARIF
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
-      # =====================
-      # Build Docker Image
-      # =====================
+
       - name: Build Docker image
         working-directory: e-commerce-api
         run: docker build -t e-commerce-api:ci .
 
-      # =====================
-      # Trivy – Image Scan
-      # =====================
       - name: Trivy image scan
         run: |
           trivy image \
@@ -113,14 +106,12 @@ jobs:
 
       - name: Upload Trivy Image SARIF
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
 
-      # =====================
-      # SBOM
-      # =====================
       - name: Generate SBOM
         run: |
           trivy fs \
@@ -133,22 +124,18 @@ jobs:
         with:
           name: sbom
           path: sbom.json
-      # =====================
-      # Test
-      # =====================
+
       - name: Run tests
         working-directory: e-commerce-api
         run: |
           go test -v -race -coverprofile=coverage.out ./...
+          echo "===== coverage ====="
           go tool cover -func=coverage.out
 
-      # =====================
-      # Build App
-      # =====================
       - name: Build application
         working-directory: e-commerce-api
         run: |
-          go build -v -o bin/ecommerce-api ./server/cmd/main.go
+          go build -v -o bin/ecommerce-api ./server/cmd
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
