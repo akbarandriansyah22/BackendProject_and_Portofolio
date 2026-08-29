@@ -314,7 +314,7 @@ const (
 	// Auth errors
 	ErrInvalidCredentials = "Invalid email or password"
 	ErrEmailExists        = "Email already exists"
-	ErrInvalidToken       = "Invalid or expired token"
+	ErrInvalidToken       = "Invalid or expired access credential"
 
 	// Validation errors
 	ErrValidationFailed = "Validation failed"
